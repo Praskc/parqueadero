@@ -1,0 +1,12 @@
+{
+  "name": "parqueadero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "broker": "pwsh -NoProfile -File scripts/broker.ps1",
+    "mqtt:log": "pwsh -NoProfile -File scripts/mqtt-log.ps1",
+    "check": "pnpm -r check"
+  }
+}

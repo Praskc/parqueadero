@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* Tipografía autoalojada (@fontsource): Barlow para la UI del kiosco
+   (herencia de señalética de transporte), Chakra Petch para cifras,
+   JetBrains Mono para datos. */
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow/700.css";
+@import "@fontsource/chakra-petch/400.css";
+@import "@fontsource/chakra-petch/600.css";
+@import "@fontsource/chakra-petch/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+/* Los datos (reloj, tópicos, métricas) usan JetBrains Mono real,
+   no el mono del navegador. La voz de la UI es Barlow en TODA la app
+   (font-sans de Tailwind apunta a Barlow; antes el stack del navegador
+   la pisaba silenciosamente). */
+@theme {
+  --font-sans: "Barlow", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  font-family: "Barlow", system-ui, -apple-system, sans-serif;
+}
+
+/* Cifras del kiosco (aforo, reloj del panel): Chakra Petch. */
+.font-tech {
+  font-family: "Chakra Petch", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* ---------- Alto contraste (MINTIC / WCAG 2.1 AA) ----------
+   Refuerza el texto apagado y los bordes tenues del tema claro. */
+html.alto-contraste body {
+  background: #f8fafc;
+}
+html.alto-contraste .text-slate-400,
+html.alto-contraste .text-slate-500 {
+  color: #0f172a;
+}
+html.alto-contraste .border-slate-200 {
+  border-color: #0f172a;
+}
+html.alto-contraste .border-slate-300 {
+  border-color: #1e293b;
+}
+
+/* ---------- Foco visible (2.4.7) ---------- */
+button:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #15803d;
+  outline-offset: 2px;
+}
+
+/* ---------- Reduced motion (2.3.3) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-ping {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+.parking-stripe {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(234, 179, 8, 0.15),
+    rgba(234, 179, 8, 0.15) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
