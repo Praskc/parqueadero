@@ -3,13 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ParqHMI · Parqueadero Unisucre</title>
-    <meta name="description" content="HMI en tiempo real del parqueadero de motocicletas Unisucre, alimentado por telemetría MQTT real." />
-    <meta name="theme-color" content="#f1f5f9" />
+    <title>Campus Puerta Roja - Parqueadero de Motocicletas</title>
+    <meta name="description" content="Control de acceso vehicular, disponibilidad de cupos en tiempo real y señalización vial del Campus Puerta Roja." />
+    <meta property="og:title" content="Campus Puerta Roja - Parqueadero de Motocicletas" />
+    <meta property="og:description" content="Control de acceso vehicular, disponibilidad de cupos en tiempo real y señalización vial del Campus Puerta Roja." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
     <!-- Fuentes autoalojadas vía @fontsource (import en style.css): sin CDN,
-         el kiosco funciona sin internet y sin fallbacks silenciosos. -->
+         el kiosco funciona sin internet. -->
+    <meta name="theme-color" content="#f1f5f9" />
   </head>
-  <body class="bg-slate-100 text-slate-900 antialiased overflow-x-hidden">
+  <body class="antialiased overflow-x-hidden transition-colors duration-200 bg-[#f1f5f9] text-slate-900">
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

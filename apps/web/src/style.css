@@ -1,51 +1,123 @@
 @import "tailwindcss";
 
-/* Tipografía autoalojada (@fontsource): Barlow para la UI del kiosco
-   (herencia de señalética de transporte), Chakra Petch para cifras,
-   JetBrains Mono para datos. */
-@import "@fontsource/barlow/400.css";
-@import "@fontsource/barlow/500.css";
-@import "@fontsource/barlow/600.css";
-@import "@fontsource/barlow/700.css";
-@import "@fontsource/chakra-petch/400.css";
-@import "@fontsource/chakra-petch/600.css";
-@import "@fontsource/chakra-petch/700.css";
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
-@import "@fontsource/jetbrains-mono/700.css";
+/* Tipografía autoalojada (@fontsource), sin CDN ni llamadas externas:
+   Barlow Condensed para titulares/señalética, Inter para la UI,
+   JetBrains Mono para datos y Barlow como respaldo del plano. */
+@import "@fontsource/barlow-condensed/latin-600.css";
+@import "@fontsource/barlow-condensed/latin-700.css";
+@import "@fontsource/barlow-condensed/latin-800.css";
+@import "@fontsource/barlow-condensed/latin-900.css";
+@import "@fontsource/barlow/latin-400.css";
+@import "@fontsource/barlow/latin-500.css";
+@import "@fontsource/barlow/latin-600.css";
+@import "@fontsource/barlow/latin-700.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-700.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-700.css";
 
 /* Los datos (reloj, tópicos, métricas) usan JetBrains Mono real,
-   no el mono del navegador. La voz de la UI es Barlow en TODA la app
-   (font-sans de Tailwind apunta a Barlow; antes el stack del navegador
-   la pisaba silenciosamente). */
+   no el mono del navegador. La voz de la UI es Inter y los titulares
+   van en Barlow Condensed (señalética de transporte). */
 @theme {
-  --font-sans: "Barlow", system-ui, -apple-system, sans-serif;
+  --font-headline: "Barlow Condensed", "Barlow", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-label: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-primary: #15803d;
+  --color-secondary: #b45309;
+  --color-tertiary: #dc2626;
+  --color-neutral: #0f172a;
 }
 
 body {
-  font-family: "Barlow", system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
-/* Cifras del kiosco (aforo, reloj del panel): Chakra Petch. */
+.font-headline {
+  font-family: "Barlow Condensed", "Barlow", system-ui, -apple-system, sans-serif;
+}
+
+.font-body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.font-label {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Cifras del kiosco (aforo, reloj del panel) */
 .font-tech {
-  font-family: "Chakra Petch", "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Barlow Condensed", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Fondo dot-grid con estética Puerta Roja Transit Signage adaptado a modo claro y oscuro */
+.bg-dot-grid {
+  background-color: #f1f5f9;
+  background-image: radial-gradient(rgba(100, 116, 139, 0.22) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+html.dark .bg-dot-grid {
+  background-color: #0b1120;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
 }
 
 /* ---------- Alto contraste (MINTIC / WCAG 2.1 AA) ----------
-   Refuerza el texto apagado y los bordes tenues del tema claro. */
-html.alto-contraste body {
+   Refuerza el texto apagado y los bordes tenues. Se separa por tema:
+   en oscuro el texto secundario debe aclararse, no oscurecerse. */
+html.light {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+html.alto-contraste .bg-dot-grid {
+  background-image: none;
+}
+html.light.alto-contraste body {
   background: #f8fafc;
 }
-html.alto-contraste .text-slate-400,
-html.alto-contraste .text-slate-500 {
+html.light.alto-contraste .text-slate-400,
+html.light.alto-contraste .text-slate-500 {
   color: #0f172a;
 }
-html.alto-contraste .border-slate-200 {
+html.light.alto-contraste .border-slate-200 {
   border-color: #0f172a;
 }
-html.alto-contraste .border-slate-300 {
+html.light.alto-contraste .border-slate-300 {
   border-color: #1e293b;
+}
+html.dark.alto-contraste .text-slate-400,
+html.dark.alto-contraste .text-slate-500 {
+  color: #f1f5f9;
+}
+html.dark.alto-contraste .border-slate-700,
+html.dark.alto-contraste .border-slate-800 {
+  border-color: #e2e8f0;
+}
+/* Los paneles claros (consola, accesibilidad) mantienen texto oscuro
+   aunque el alto contraste esté activo junto al tema oscuro. */
+html.dark.alto-contraste .panel-claro .text-slate-400 {
+  color: #64748b;
+}
+html.dark.alto-contraste .panel-claro .text-slate-500 {
+  color: #475569;
+}
+html.dark.alto-contraste .panel-claro .text-slate-600 {
+  color: #334155;
+}
+html.dark.alto-contraste .panel-claro .border-slate-200 {
+  border-color: #cbd5e1;
+}
+html.dark.alto-contraste .panel-claro .border-slate-300 {
+  border-color: #94a3b8;
 }
 
 /* ---------- Foco visible (2.4.7) ---------- */
@@ -71,8 +143,8 @@ a:focus-visible,
 .parking-stripe {
   background: repeating-linear-gradient(
     45deg,
-    rgba(234, 179, 8, 0.15),
-    rgba(234, 179, 8, 0.15) 10px,
+    rgba(180, 83, 9, 0.2),
+    rgba(180, 83, 9, 0.2) 10px,
     transparent 10px,
     transparent 20px
   );

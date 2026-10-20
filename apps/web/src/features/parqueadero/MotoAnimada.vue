@@ -31,9 +31,9 @@ const colorCarroceria = () =>
 
     <g transform="translate(0, -34)">
       <g v-if="anim.etapa === 'esperando'">
-        <rect x="-48" y="-11" width="96" height="22" rx="4" fill="#78350f" stroke="#f59e0b" stroke-width="1.6" />
-        <circle cx="-38" cy="0" r="3.5" fill="#f59e0b" class="animate-pulse" />
-        <text x="4" y="3.5" fill="#fef3c7" font-size="8" font-weight="900" text-anchor="middle">ESPERANDO CUPO</text>
+        <rect x="-48" y="-11" width="96" height="22" rx="4" fill="#0f172a" stroke="#0284c7" stroke-width="1.6" />
+        <circle cx="-38" cy="0" r="3.5" fill="#38bdf8" class="animate-pulse" />
+        <text x="4" y="3.5" fill="#f0f9ff" font-size="8" font-weight="900" text-anchor="middle">ESPERANDO CUPO</text>
       </g>
       <g v-else>
         <rect

@@ -10,6 +10,7 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 
 const ESCALAS = [100, 125, 150, 200] as const;
 const TAMANOS_BASE = { 100: "16px", 125: "20px", 150: "24px", 200: "32px" } as const;
+const ETIQUETAS = { 100: "A", 125: "A+", 150: "A++", 200: "A+++" } as const;
 
 const abierto = ref(false);
 const escala = ref<(typeof ESCALAS)[number]>(100);
@@ -17,7 +18,7 @@ const contraste = ref(false);
 
 function cargarPreferencias() {
   const e = Number(localStorage.getItem("accesibilidad:escala"));
-  if (e === 125 || e === 150) escala.value = e;
+  if (ESCALAS.includes(e as (typeof ESCALAS)[number])) escala.value = e as (typeof ESCALAS)[number];
   contraste.value = localStorage.getItem("accesibilidad:contraste") === "1";
 }
 
@@ -73,7 +74,7 @@ function restablecer() {
 
     <div
       v-if="abierto"
-      class="absolute bottom-16 right-0 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 w-64 flex flex-col gap-3.5"
+      class="panel-claro absolute bottom-16 right-0 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 w-64 flex flex-col gap-3.5"
       role="dialog"
       aria-label="Accesibilidad"
     >
@@ -91,7 +92,7 @@ function restablecer() {
             :style="{ fontSize: `${11 + (esc - 100) / 33}px` }"
             @click="escala = esc"
           >
-            A{{ esc === 100 ? "" : esc === 125 ? "+" : "++" }}
+            {{ ETIQUETAS[esc] }}
           </button>
         </div>
       </div>
