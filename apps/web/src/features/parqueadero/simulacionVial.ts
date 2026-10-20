@@ -148,17 +148,38 @@ async function publicar(id: string, estado: Estado, nodo: string): Promise<boole
 
 // ---------- Talanquera (FSM visual local) ----------
 
+/** Un solo temporizador evita que una apertura y un cierre se pisen. */
+let timerTalanquera: number | null = null;
+
+function cancelarTimerTalanquera() {
+  if (timerTalanquera !== null) {
+    window.clearTimeout(timerTalanquera);
+    timerTalanquera = null;
+  }
+}
+
+function programarEstadoTalanquera(estado: "abierta" | "cerrada", ms: number) {
+  cancelarTimerTalanquera();
+  timerTalanquera = window.setTimeout(() => {
+    timerTalanquera = null;
+    if (!bloqueada.value) talanquera.value = estado;
+  }, ms);
+}
+
 function abrirTalanquera() {
   if (bloqueada.value) return;
+  // Si ya está abierta o abriéndose no se reinicia el movimiento ni el sonido.
+  if (talanquera.value === "abierta" || talanquera.value === "abriendo") return;
   sonido.talanquera();
   talanquera.value = "abriendo";
-  setTimeout(() => { if (!bloqueada.value) talanquera.value = "abierta"; }, 450);
+  programarEstadoTalanquera("abierta", 450);
 }
 
 function cerrarTalanquera() {
   if (bloqueada.value || hayMotoEnPuerta()) return;
+  if (talanquera.value === "cerrada" || talanquera.value === "cerrando") return;
   talanquera.value = "cerrando";
-  setTimeout(() => { if (!bloqueada.value) talanquera.value = "cerrada"; }, 500);
+  programarEstadoTalanquera("cerrada", 450);
 }
 
 function hayMotoEnPuerta(): boolean {
@@ -243,6 +264,9 @@ function animarSalida(espacioId: string, publicarAlFinal: boolean, retardoMs = 0
   const exitLaneY = CIRCULACION.entradaY[1];
   window.setTimeout(() => {
     if (!anims.has(anim.id)) return;
+    // La salida también abre la talanquera: antes se quedaba cerrada y la moto
+    // atravesaba el brazo. Se abre al arrancar para que esté libre al llegar.
+    abrirTalanquera();
     tween(anim, DUR_SALIDA, (p) => {
       let x = ini.x, y = ini.y, rot = ini.rotacion;
       if (p < 0.2) {
@@ -278,6 +302,7 @@ function animarSalida(espacioId: string, publicarAlFinal: boolean, retardoMs = 0
       anims.delete(anim.id);
       if (publicarAlFinal) void publicar(espacioId, "LIBRE", "salida");
       resolverEsperas();
+      cerrarTalanquera();
     });
   }, retardoMs);
 }
@@ -398,6 +423,7 @@ export function resolverEsperas() {
 
 export function toggleBloqueo() {
   bloqueada.value = !bloqueada.value;
+  cancelarTimerTalanquera();
   if (bloqueada.value) {
     talanquera.value = "bloqueada";
     sonido.lleno();
