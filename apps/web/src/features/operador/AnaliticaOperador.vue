@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * Analítica del operador — puerto a Vue nativo (SVG puro) del
  * "OperatorAnalyticsChart" de la maqueta (que era React + Recharts).
@@ -272,7 +272,7 @@ const NODO_COLORES = ["#059669", "#0284c7", "#d97706", "#7c3aed", "#64748b"];
         </g>
         <line :x1="PL" :y1="baseY" :x2="FW - PR" :y2="baseY" stroke="#cbd5e1" />
         <text v-if="!hayEventos" :x="FW / 2" :y="FH / 2" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="600">
-          Sin eventos MQTT registrados hoy — publica una maniobra para poblar la curva
+          Sin movimientos registrados hoy en la planilla — se registrarán con las entradas y salidas de motos
         </text>
       </svg>
     </div>
@@ -392,10 +392,10 @@ const NODO_COLORES = ["#059669", "#0284c7", "#d97706", "#7c3aed", "#64748b"];
       <div>
         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
           <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-          Indicadores de Rendimiento y Balance por Nodo Publicador
+          Indicadores de Rendimiento y Balance por Punto de Registro
         </h4>
         <p class="text-[11px] text-slate-500">
-          Eventos de hoy agrupados por el nodo que publicó en el broker (portería, salida, operador, sensores)
+          Entradas y salidas de hoy agrupadas por punto de control (portería, salida, consola de guardia, sensores de puesto)
         </p>
       </div>
 
@@ -442,7 +442,7 @@ const NODO_COLORES = ["#059669", "#0284c7", "#d97706", "#7c3aed", "#64748b"];
           <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Plazas reportando</span>
             <span class="text-xl font-extrabold text-indigo-600 font-mono my-1">{{ conDato }}/{{ total }}</span>
-            <span class="text-[10px] text-slate-500 font-medium">Plazas con telemetría viva</span>
+            <span class="text-[10px] text-slate-500 font-medium">Plazas con sensor activo</span>
           </div>
         </div>
       </div>

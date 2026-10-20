@@ -19,17 +19,49 @@
    (font-sans de Tailwind apunta a Barlow; antes el stack del navegador
    la pisaba silenciosamente). */
 @theme {
-  --font-sans: "Barlow", system-ui, -apple-system, sans-serif;
+  --font-headline: "Barlow Condensed", "Barlow", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-label: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-primary: #15803d;
+  --color-secondary: #b45309;
+  --color-tertiary: #dc2626;
+  --color-neutral: #0f172a;
 }
 
 body {
-  font-family: "Barlow", system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
-/* Cifras del kiosco (aforo, reloj del panel): Chakra Petch. */
+.font-headline {
+  font-family: "Barlow Condensed", "Barlow", system-ui, -apple-system, sans-serif;
+}
+
+.font-body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.font-label {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Cifras del kiosco (aforo, reloj del panel) */
 .font-tech {
-  font-family: "Chakra Petch", "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Barlow Condensed", "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Fondo dot-grid con estética Puerta Roja Transit Signage adaptado a modo claro y oscuro */
+.bg-dot-grid {
+  background-color: #f1f5f9;
+  background-image: radial-gradient(rgba(100, 116, 139, 0.22) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+html.dark .bg-dot-grid {
+  background-color: #0b1120;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
 }
 
 /* ---------- Alto contraste (MINTIC / WCAG 2.1 AA) ----------
@@ -71,8 +103,8 @@ a:focus-visible,
 .parking-stripe {
   background: repeating-linear-gradient(
     45deg,
-    rgba(234, 179, 8, 0.15),
-    rgba(234, 179, 8, 0.15) 10px,
+    rgba(180, 83, 9, 0.2),
+    rgba(180, 83, 9, 0.2) 10px,
     transparent 10px,
     transparent 20px
   );

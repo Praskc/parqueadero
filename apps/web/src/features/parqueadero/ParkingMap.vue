@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { AnimacionMoto, Bahia, EstadoTalanquera } from "../../types/hmi";
-import MotoAnimada from "./MotoAnimada.vue";
 import MotoFigura from "./MotoFigura.vue";
 import { ALTO_PLANO, ANCHO_PLANO, BAHIA_ALTO, BAHIA_ANCHO, CORREDOR, PATIO } from "../../config/bahias";
+import { tema } from "../../shared/theme";
 
 const props = defineProps<{
   bahias: Bahia[];
-  animaciones: AnimacionMoto[];
+  animaciones?: AnimacionMoto[];
   talanquera: EstadoTalanquera;
   bloqueada: boolean;
 }>();
 
-const animEspacioIds = computed(() => new Set(props.animaciones.map((a) => a.espacioId)));
+defineEmits<{ (e: "select-espacio", id: string): void }>();
 
 const barrierAngle = computed(() => {
   if (props.bloqueada || props.talanquera === "bloqueada" || props.talanquera === "cerrada") return 0;
@@ -25,7 +25,8 @@ const barrierAngle = computed(() => {
 
 <template>
   <div
-    class="relative w-full bg-slate-200 rounded-2xl border-2 border-slate-300 overflow-hidden shadow-md select-none"
+    class="relative w-full rounded-2xl border overflow-hidden shadow-md select-none transition-colors duration-200"
+    :class="tema === 'oscuro' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'"
     :style="{ aspectRatio: `${ANCHO_PLANO} / ${ALTO_PLANO}` }"
   >
     <svg :viewBox="`0 0 ${ANCHO_PLANO} ${ALTO_PLANO}`" class="w-full h-full block" preserveAspectRatio="xMidYMid meet">
@@ -35,8 +36,28 @@ const barrierAngle = computed(() => {
           <stop offset="50%" stop-color="#fef08a" stop-opacity="0.3" />
           <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
         </radialGradient>
+        <radialGradient id="sensor-glow-green" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#22c55e" stop-opacity="0.85" />
+          <stop offset="40%" stop-color="#22c55e" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#22c55e" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="sensor-glow-red" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ef4444" stop-opacity="0.85" />
+          <stop offset="40%" stop-color="#ef4444" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="sensor-glow-amber" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#b45309" stop-opacity="0.85" />
+          <stop offset="40%" stop-color="#b45309" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#b45309" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="sensor-glow-sky" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.85" />
+          <stop offset="40%" stop-color="#38bdf8" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0" />
+        </radialGradient>
         <pattern id="bay-hatch-unisucre" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="7" height="14" fill="rgba(234, 179, 8, 0.25)" />
+          <rect width="7" height="14" fill="rgba(148, 163, 184, 0.2)" />
           <rect x="7" width="7" height="14" fill="transparent" />
         </pattern>
         <filter id="shadow-unisucre" x="-20%" y="-20%" width="140%" height="140%">
@@ -45,7 +66,7 @@ const barrierAngle = computed(() => {
       </defs>
 
       <!-- 1. TERRENO -->
-      <rect x="0" y="0" :width="ANCHO_PLANO" :height="ALTO_PLANO" fill="#e2e8f0" />
+      <rect x="0" y="0" :width="ANCHO_PLANO" :height="ALTO_PLANO" :fill="tema === 'oscuro' ? '#0b1120' : '#f1f5f9'" />
 
       <g id="jardineria-norte">
         <rect x="235" y="0" :width="ANCHO_PLANO - 235" height="42" fill="#166534" />
@@ -65,76 +86,99 @@ const barrierAngle = computed(() => {
         <circle cx="1000" cy="538" r="13" fill="#15803d" stroke="#14532d" stroke-width="1.5" />
       </g>
 
-      <!-- 2. CALLE PÚBLICA -->
-      <rect x="0" y="0" width="126" :height="ALTO_PLANO" fill="#334155" />
-      <line x1="28" y1="0" x2="28" :y2="ALTO_PLANO" stroke="#f8fafc" stroke-width="1.8" opacity="0.85" />
-      <g transform="translate(14, 65)" opacity="0.85">
-        <line x1="0" y1="-14" x2="0" y2="14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M -5 7 L 0 16 L 5 7" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </g>
-      <g transform="translate(43, 135)" opacity="0.85">
-        <line x1="0" y1="-14" x2="0" y2="10" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M 0 4 Q 0 14, 10 14 L 14 14" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M 8 9 L 17 14 L 8 19" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </g>
-      <line x1="58" y1="0" x2="58" :y2="ALTO_PLANO" stroke="#facc15" stroke-width="2.2" />
-      <line x1="64" y1="0" x2="64" :y2="ALTO_PLANO" stroke="#facc15" stroke-width="2.2" />
-      <line x1="95" y1="0" x2="95" y2="185" stroke="#f8fafc" stroke-width="1.8" opacity="0.85" />
-      <line x1="95" y1="185" x2="95" :y2="ALTO_PLANO - 185" stroke="#f8fafc" stroke-width="1.8" stroke-dasharray="6 6" opacity="0.7" />
-      <line x1="95" :y1="ALTO_PLANO - 185" x2="95" :y2="ALTO_PLANO" stroke="#f8fafc" stroke-width="1.8" opacity="0.85" />
-      <g transform="translate(80, 425)" opacity="0.85">
-        <line x1="0" y1="14" x2="0" y2="-10" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M 0 -4 Q 0 -14, 10 -14 L 14 -14" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M 8 -19 L 17 -14 L 8 -9" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      </g>
-      <g transform="translate(110, 495)" opacity="0.85">
-        <line x1="0" y1="14" x2="0" y2="-14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
-        <path d="M -5 -7 L 0 -16 L 5 -7" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 2. CALLE PÚBLICA EXTERIOR -->
+      <g id="calle-publica">
+        <!-- Calzada de asfalto -->
+        <rect x="0" y="0" width="130" :height="ALTO_PLANO" fill="#334155" />
+
+        <!-- Andén exterior izquierdo (borde oeste) -->
+        <rect x="0" y="0" width="12" :height="ALTO_PLANO" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1" />
+        <line x1="12" y1="0" x2="12" :y2="ALTO_PLANO" stroke="#64748b" stroke-width="2" />
+
+        <!-- Línea blanca lateral continua (carril norte) -->
+        <line x1="18" y1="0" x2="18" :y2="ALTO_PLANO" stroke="#ffffff" stroke-width="2" opacity="0.9" />
+
+        <!-- Línea blanca lateral (carril sur) interrumpida por la entrada del campus -->
+        <line x1="126" y1="0" x2="126" y2="190" stroke="#ffffff" stroke-width="2" opacity="0.9" />
+        <line x1="126" y1="370" x2="126" :y2="ALTO_PLANO" stroke="#ffffff" stroke-width="2" opacity="0.9" />
+
+        <!-- Doble línea amarilla continua central con tachas reflectivas (norma colombiana) -->
+        <line x1="62" y1="0" x2="62" :y2="ALTO_PLANO" stroke="#facc15" stroke-width="2" />
+        <line x1="68" y1="0" x2="68" :y2="ALTO_PLANO" stroke="#facc15" stroke-width="2" />
+        <g id="tachas-amarillas">
+          <circle cx="65" cy="40" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="100" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="160" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="220" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="280" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="340" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="400" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="460" r="1.5" fill="#fef08a" />
+          <circle cx="65" cy="520" r="1.5" fill="#fef08a" />
+        </g>
+
+        <!-- Flecha vial carril norte: giro reglamentario hacia la entrada del campus -->
+        <g transform="translate(36, 148)" fill="#ffffff" opacity="0.92">
+          <path d="M -1.8,-18 L 1.8,-18 L 1.8,-2 C 1.8,4 5.5,8 12,8 L 12,4 L 20,9.5 L 12,15 L 12,11 C 3.5,11 -1.8,6 -1.8,-2 Z" />
+        </g>
+
+        <!-- Flecha vial carril sur: giro reglamentario hacia la entrada del campus -->
+        <g transform="translate(94, 400)" fill="#ffffff" opacity="0.92">
+          <path d="M -1.8,18 L 1.8,18 L 1.8,2 C 1.8,-4 5.5,-8 12,-8 L 12,-4 L 20,-9.5 L 12,-15 L 12,-11 C 3.5,-11 -1.8,-6 -1.8,2 Z" />
+        </g>
+
+        <!-- Andén este con cordón de concreto -->
+        <rect x="126" y="0" width="16" height="190" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2" />
+        <line x1="126" y1="0" x2="126" y2="190" stroke="#64748b" stroke-width="2.2" />
+        <rect x="126" y="370" width="16" height="190" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2" />
+        <line x1="126" y1="370" x2="126" :y2="ALTO_PLANO" stroke="#64748b" stroke-width="2.2" />
       </g>
 
-      <!-- Andén -->
-      <rect x="126" y="0" width="16" height="190" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2" />
-      <line x1="126" y1="0" x2="126" y2="190" stroke="#64748b" stroke-width="2.2" />
-      <rect x="126" y="370" width="16" height="190" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.2" />
-      <line x1="126" y1="370" x2="126" :y2="ALTO_PLANO - 42" stroke="#64748b" stroke-width="2.2" />
+      <!-- 3. RAMPA Y ACCESO PRINCIPAL AL CAMPUS (x: 126 a 240, y: 190 a 370) -->
+      <g id="rampa-acceso">
+        <!-- Asfalto de la embocadura de acceso con radios de giro suaves -->
+        <path d="M 126 190 C 160 190, 185 205, 240 205 L 240 355 C 185 355, 160 370, 126 370 Z" fill="#334155" />
+        <!-- Bordillos curvos con sardinel en relieve -->
+        <path d="M 126 190 C 160 190, 185 205, 240 205" stroke="#64748b" stroke-width="4" fill="none" stroke-linecap="round" />
+        <path d="M 126 188 C 160 188, 185 203, 240 203" stroke="#cbd5e1" stroke-width="2" fill="none" />
+        <path d="M 126 370 C 160 370, 185 355, 240 355" stroke="#64748b" stroke-width="4" fill="none" stroke-linecap="round" />
+        <path d="M 126 372 C 160 372, 185 357, 240 357" stroke="#cbd5e1" stroke-width="2" fill="none" />
 
-      <!-- Rampa -->
-      <path d="M 126 190 C 155 190, 185 205, 240 205 L 240 355 C 185 355, 155 370, 126 370 Z" fill="#334155" />
-      <path d="M 126 190 C 155 190, 185 205, 240 205" stroke="#94a3b8" stroke-width="3" fill="none" stroke-linecap="round" />
-      <path d="M 126 188 C 155 188, 185 203, 240 203" stroke="#f8fafc" stroke-width="1.5" fill="none" />
-      <path d="M 126 370 C 155 370, 185 355, 240 355" stroke="#94a3b8" stroke-width="3" fill="none" stroke-linecap="round" />
-      <path d="M 126 372 C 155 372, 185 357, 240 357" stroke="#f8fafc" stroke-width="1.5" fill="none" />
+        <!-- Cebra peatonal sobre el acceso (paso seguro para estudiantes y peatones) -->
+        <g id="cebra-peatonal-acceso" opacity="0.95">
+          <rect x="130" y="200" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="214" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="228" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="242" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="256" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="270" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="286" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="300" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="314" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="328" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="342" width="12" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="130" y="356" width="12" height="8" rx="1.5" fill="#ffffff" />
+        </g>
 
-      <!-- Cebra -->
-      <g id="cebra-peatonal-acceso" opacity="0.9">
-        <rect x="128" y="202" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="215" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="228" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="241" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="254" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="267" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="286" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="299" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="312" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="325" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="338" width="11" height="7" rx="1" fill="#ffffff" />
-        <rect x="128" y="351" width="11" height="7" rx="1" fill="#ffffff" />
+        <!-- Divisoria de carriles entrada / salida -->
+        <line x1="148" y1="280" x2="235" y2="280" stroke="#facc15" stroke-width="2.2" stroke-dasharray="8 6" opacity="0.9" />
+
+        <!-- Señalización carril de entrada (Norte, y = 250) -->
+        <g transform="translate(162, 250)" fill="#ffffff" opacity="0.92">
+          <path d="M -12,-1.8 L 4,-1.8 L 4,-6 L 14,0 L 4,6 L 4,1.8 L -12,1.8 Z" />
+        </g>
+
+        <!-- Señalización carril de salida (Sur, y = 305) -->
+        <g transform="translate(162, 305)" fill="#ffffff" opacity="0.92">
+          <path d="M 12,-1.8 L -4,-1.8 L -4,-6 L -14,0 L -4,6 L -4,1.8 L 12,1.8 Z" />
+        </g>
       </g>
 
-      <!-- Ramp: divisoria y flechas -->
-      <line x1="145" y1="280" x2="235" y2="280" stroke="#ffffff" stroke-width="2.2" stroke-dasharray="8 5" opacity="0.85" />
-      <g opacity="0.8">
-        <path d="M 154 245 L 166 245 M 161 241 L 166 245 L 161 249" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-        <path d="M 154 315 L 166 315 M 161 311 L 166 315 L 161 319" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-      </g>
-      <text x="175" y="222" fill="#94a3b8" font-size="5.5" font-weight="bold" letter-spacing="0.5" opacity="0.8">CARRIL NORTE</text>
-      <text x="175" y="338" fill="#94a3b8" font-size="5.5" font-weight="bold" letter-spacing="0.5" opacity="0.8">CARRIL SUR</text>
-
-      <!-- 3. PORTERÍA Y CASETA (original) -->
+      <!-- 4. PORTERÍA Y CASETA DE VIGILANCIA -->
       <g id="caseta-porteria" transform="translate(182, 126)">
         <rect x="-42" y="-34" width="84" height="78" rx="8" fill="#0f172a" opacity="0.22" />
         <rect x="-40" y="-32" width="80" height="74" rx="7" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5" />
-        <rect x="-38" y="36" width="76" height="5" rx="1.5" fill="#eab308" stroke="#ca8a04" stroke-width="0.8" />
+        <rect x="-38" y="36" width="76" height="5" rx="1.5" fill="#64748b" stroke="#475569" stroke-width="0.8" />
         <rect x="-26" y="36" width="13" height="5" fill="#0f172a" />
         <rect x="0" y="36" width="13" height="5" fill="#0f172a" />
         <rect x="26" y="36" width="10" height="5" fill="#0f172a" />
@@ -168,7 +212,7 @@ const barrierAngle = computed(() => {
         <rect x="-37" y="-29" width="74" height="13" rx="2" fill="#15803d" />
         <line x1="-37" y1="-17" x2="37" y2="-17" stroke="#ffffff" stroke-width="1.2" />
         <text x="0" y="-21" fill="#ffffff" font-size="4.2" font-weight="800" font-family="'Barlow', system-ui, sans-serif" text-anchor="middle" letter-spacing="0.3">CONTROL DE ACCESO</text>
-        <circle cx="28" cy="-17" r="1.8" fill="#fef08a" stroke="#ca8a04" stroke-width="0.6" />
+        <circle cx="28" cy="-17" r="1.8" fill="#22c55e" stroke="#15803d" stroke-width="0.6" />
       </g>
 
       <!-- PARE -->
@@ -184,19 +228,13 @@ const barrierAngle = computed(() => {
         <text x="0" y="3.5" fill="#ffffff" font-size="7" font-weight="900" font-family="'Barlow', system-ui, sans-serif" letter-spacing="0.4" text-anchor="middle">Pare</text>
       </g>
 
-      <!-- Velocidad -->
+      <!-- Velocidad 10 km/h -->
       <g id="senal-velocidad-colombia" transform="translate(135, 172)">
         <line x1="0" y1="0" x2="0" y2="18" stroke="#475569" stroke-width="2" />
         <circle cx="0" cy="-4" r="11" fill="#ffffff" stroke="#dc2626" stroke-width="2.2" />
         <text x="0" y="-1" fill="#0f172a" font-size="8" font-weight="900" text-anchor="middle">10</text>
         <text x="0" y="4.5" fill="#475569" font-size="4" font-weight="bold" text-anchor="middle">km/h</text>
       </g>
-
-      <!-- Sensores -->
-      <rect x="175" y="228" width="48" height="38" rx="3" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 3" />
-      <text x="199" y="250" fill="#0284c7" font-size="6.5" text-anchor="middle" font-weight="bold">SENSOR N</text>
-      <rect x="175" y="294" width="48" height="38" rx="3" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="5 3" />
-      <text x="199" y="316" fill="#0284c7" font-size="6.5" text-anchor="middle" font-weight="bold">SENSOR S</text>
 
       <!-- Talanquera -->
       <g id="talanquera-unisucre" transform="translate(235, 210)">
@@ -209,7 +247,7 @@ const barrierAngle = computed(() => {
           <rect x="-4" y="45" width="8" height="18" fill="#dc2626" />
           <rect x="-4" y="75" width="8" height="18" fill="#dc2626" />
           <rect x="-4" y="105" width="8" height="18" fill="#dc2626" />
-          <circle cx="0" cy="132" r="3.5" fill="#eab308" />
+          <circle cx="0" cy="132" r="3.5" fill="#ffffff" stroke="#dc2626" stroke-width="0.8" />
           <g v-if="bloqueada" transform="translate(0, 68)">
             <rect x="-40" y="-10" width="80" height="20" rx="3" fill="#dc2626" stroke="#ffffff" stroke-width="1.5" />
             <text x="0" y="4" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PASO BLOQUEADO</text>
@@ -219,55 +257,209 @@ const barrierAngle = computed(() => {
       </g>
       <rect x="229" y="342" width="12" height="14" rx="2" fill="#ea580c" />
 
-      <!-- 4. PATIO: fondo verde, corredor central, una sola isla de asfalto -->
-      <rect x="240" y="42" :width="ANCHO_PLANO - 240" height="476" rx="4" fill="#166534" opacity="0.22" />
+      <!-- 4. PATIO: Calzada y Grilla de Parqueadero Completa (x: 260 a 980, y: 50 a 510) -->
+      <rect x="240" y="42" :width="ANCHO_PLANO - 240" height="476" rx="4" fill="#166534" opacity="0.18" />
 
-      <!-- Patio de asfalto: las dos filas de puestos -->
-      <rect :x="PATIO.x" :y="PATIO.y" :width="PATIO.w" :height="PATIO.h" rx="14" fill="#334155" stroke="#1e293b" stroke-width="2.5" />
+      <!-- Superficie de asfalto que abarca toda la zona de estacionamiento -->
+      <rect :x="PATIO.x" :y="PATIO.y" :width="PATIO.w" :height="PATIO.h" rx="14" fill="#1e293b" stroke="#0f172a" stroke-width="2.5" />
 
-      <!-- Corredor central: empalma con la rampa (y=280) y cruza el patio -->
-      <rect x="240" :y="CORREDOR.y" :width="ANCHO_PLANO - 260" :height="CORREDOR.h" fill="#475569" />
-      <line x1="245" :y1="CORREDOR.y + CORREDOR.h / 2" :x2="ANCHO_PLANO - 25" :y2="CORREDOR.y + CORREDOR.h / 2" stroke="#facc15" stroke-width="1.2" stroke-dasharray="12 8" opacity="0.85" />
-      <path :d="`M 400 ${CORREDOR.y + CORREDOR.h / 2} l 24 -7 l 0 14 z`" fill="#facc15" opacity="0.9" />
-      <path :d="`M 700 ${CORREDOR.y + CORREDOR.h / 2} l 24 -7 l 0 14 z`" fill="#facc15" opacity="0.9" />
+      <!-- Bordillos de concreto perimetrales al fondo de las plazas -->
+      <line x1="280" y1="50" x2="960" y2="50" stroke="#64748b" stroke-width="5.5" stroke-linecap="square" />
+      <line x1="280" y1="48" x2="960" y2="48" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="square" />
+      <line x1="280" y1="510" x2="960" y2="510" stroke="#64748b" stroke-width="5.5" stroke-linecap="square" />
+      <line x1="280" y1="512" x2="960" y2="512" stroke="#475569" stroke-width="1.8" stroke-linecap="square" />
 
-      <!-- Letrero pintado sobre el corredor (demarcación vial, no flotante) -->
-      <g id="letrero-parqueadero">
-        <rect x="250" :y="CORREDOR.y + 6" width="330" height="20" rx="4" fill="rgba(71, 85, 105, 0.85)" />
-        <text x="260" :y="CORREDOR.y + 20" fill="#facc15" font-size="10" font-weight="800" font-family="'Barlow', system-ui, sans-serif" letter-spacing="1.5">PARQUEADERO</text>
-        <text x="368" :y="CORREDOR.y + 20" fill="#cbd5e1" font-size="7" font-weight="600" font-family="'Barlow', system-ui, sans-serif">E01 – E10 · 10 cupos</text>
-      </g>
+      <!-- Corredor central (calzada de maniobra vehicular): y=240 a 320 -->
+      <rect x="240" :y="CORREDOR.y" :width="ANCHO_PLANO - 250" :height="CORREDOR.h" fill="#334155" />
+      <line x1="245" :y1="CORREDOR.y + CORREDOR.h / 2" :x2="ANCHO_PLANO - 25" :y2="CORREDOR.y + CORREDOR.h / 2" stroke="#ffffff" stroke-width="2.2" stroke-dasharray="16 10" opacity="0.9" />
+      <path :d="`M 400 ${CORREDOR.y + CORREDOR.h / 2} l 22 -7 l 0 14 z`" fill="#ffffff" opacity="0.9" />
+      <path :d="`M 720 ${CORREDOR.y + CORREDOR.h / 2} l 22 -7 l 0 14 z`" fill="#ffffff" opacity="0.9" />
 
-      <!-- Bahías: 80px de gap entre columnas, distribuidas en TODA la isla -->
+      <!-- Bahías: Grilla continua de 10 plazas (5 Norte contiguas, 5 Sur contiguas) -->
       <g v-for="bahia in bahias" :key="bahia.id">
-        <g :transform="`translate(${(bahia.posicion.x / 100) * ANCHO_PLANO}, ${(bahia.posicion.y / 100) * ALTO_PLANO})`">
-          <rect
-            :x="-BAHIA_ANCHO / 2"
-            :y="-BAHIA_ALTO / 2"
-            :width="BAHIA_ANCHO"
-            :height="BAHIA_ALTO"
-            rx="3"
-            :fill="bahia.estado === 'OCUPADO' ? 'rgba(239, 68, 68, 0.28)' : bahia.estado === 'LIBRE' ? 'rgba(34, 197, 94, 0.24)' : 'rgba(245, 158, 11, 0.22)'"
-            stroke="#facc15"
-            stroke-width="2"
-          />
-          <text x="0" :y="bahia.posicion.rotacion === 90 ? -BAHIA_ALTO / 2 + 13 : BAHIA_ALTO / 2 - 6" fill="#ffffff" font-size="8.5" font-weight="bold" text-anchor="middle">{{ bahia.id }}</text>
-          <circle cx="0" :cy="bahia.posicion.rotacion === 90 ? BAHIA_ALTO / 2 - 5 : -BAHIA_ALTO / 2 + 5" r="3.5" :fill="bahia.estado === 'LIBRE' ? '#22c55e' : bahia.estado === 'OCUPADO' ? '#ef4444' : '#f59e0b'" stroke="#ffffff" stroke-width="0.8" />
+        <g
+          :transform="`translate(${(bahia.posicion.x / 100) * ANCHO_PLANO}, ${(bahia.posicion.y / 100) * ALTO_PLANO})`"
+          class="cursor-pointer group"
+          @click="$emit('select-espacio', bahia.id)"
+        >
+          <title>{{ `Plaza ${bahia.id} · ${bahia.estado === 'LIBRE' ? 'Disponible' : bahia.estado === 'OCUPADO' ? 'Ocupada' : 'Sin Dato'}` }}</title>
 
-          <g v-if="bahia.estado === 'OCUPADO' && !animEspacioIds.has(bahia.id)" :transform="`rotate(${bahia.posicion.rotacion})`" filter="url(#shadow-unisucre)">
-            <ellipse cx="0.8" cy="1" rx="20" ry="9.5" fill="rgba(15,23,42,0.3)" />
-            <MotoFigura color="#15803d" pata />
-          </g>
+          <!-- Rotación hacia el corredor central (local +x = entrada abierta desde la vía) -->
+          <g :transform="`rotate(${bahia.posicion.rotacion})`">
+            
+            <!-- 1. Pavimento de la plaza (130x190) que llena la grilla -->
+            <rect
+              x="-95"
+              y="-65"
+              width="190"
+              height="130"
+              rx="4"
+              :fill="bahia.estado === 'LIBRE' ? '#14251e' : bahia.estado === 'OCUPADO' ? '#18202d' : '#1e293b'"
+              stroke="#0f172a"
+              stroke-width="1.8"
+            />
 
-          <g v-if="bahia.estado === 'LIBRE' && !animEspacioIds.has(bahia.id)" opacity="0.85">
-            <circle cx="0" cy="0" r="8" fill="none" stroke="#22c55e" stroke-width="1.2" />
-            <text x="0" y="2" fill="#22c55e" font-size="5.5" font-weight="bold" text-anchor="middle">LIBRE</text>
+            <!-- 2. Demarcación vial termo-plástica: franjas blancas nítidas contiguas compartidas -->
+            <path
+              d="M 95 -65 L -95 -65 L -95 65 L 95 65"
+              fill="none"
+              stroke="#ffffff"
+              stroke-width="3"
+              stroke-linecap="square"
+              stroke-linejoin="miter"
+              opacity="0.95"
+            />
+            <!-- T-ticks de remate vial en la entrada desde el corredor -->
+            <line x1="95" y1="-70" x2="95" y2="-60" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95" />
+            <line x1="95" y1="60" x2="95" y2="70" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.95" />
+
+            <!-- 3. Tope de llanta de caucho vulcanizado amplio (Wheel Stop) -->
+            <g id="tope-llanta" transform="translate(-75, 0)">
+              <!-- Sombra del tope sobre el asfalto -->
+              <rect x="-2" y="-36" width="12" height="72" rx="3" fill="#020617" opacity="0.65" />
+              <!-- Cuerpo de caucho vulcanizado -->
+              <rect x="-5" y="-34" width="10" height="68" rx="2" fill="#0f172a" stroke="#334155" stroke-width="1" />
+              <!-- Franjas reflectivas blancas del tope -->
+              <rect x="-4" y="-28" width="8" height="8" fill="#f8fafc" />
+              <rect x="-4" y="-12" width="8" height="8" fill="#f8fafc" />
+              <rect x="-4" y="4" width="8" height="8" fill="#f8fafc" />
+              <rect x="-4" y="20" width="8" height="8" fill="#f8fafc" />
+              <!-- Pernos de fijación -->
+              <circle cx="0" cy="-20" r="1.5" fill="#94a3b8" />
+              <circle cx="0" cy="20" r="1.5" fill="#94a3b8" />
+            </g>
+
+            <!-- 4. Código de plaza pintado en el pavimento en gran tamaño (E01...E10) -->
+            <text
+              x="-48"
+              y="0"
+              fill="#ffffff"
+              opacity="0.95"
+              font-size="18"
+              font-weight="900"
+              font-family="'JetBrains Mono', 'Barlow', monospace"
+              text-anchor="middle"
+              dominant-baseline="central"
+              letter-spacing="1.5"
+            >
+              {{ bahia.id }}
+            </text>
+
+            <!-- 5. Demarcación vial para plaza LIBRE: DISPONIBLE -->
+            <g v-if="bahia.estado === 'LIBRE'" opacity="0.95">
+              <text
+                x="25"
+                y="0"
+                fill="#22c55e"
+                font-size="9.5"
+                font-weight="900"
+                font-family="'Barlow Condensed', 'Barlow', system-ui, sans-serif"
+                text-anchor="middle"
+                dominant-baseline="central"
+                letter-spacing="1.5"
+              >
+                DISPONIBLE
+              </text>
+            </g>
+
+            <!-- 6. Demarcación para plaza en CALIBRACIÓN / SIN DATO -->
+            <g v-if="bahia.estado === 'SIN_DATO'" opacity="0.85">
+              <rect x="-90" y="-60" width="180" height="120" fill="url(#bay-hatch-unisucre)" />
+              <text
+                x="25"
+                y="0"
+                fill="#b45309"
+                font-size="9.5"
+                font-weight="900"
+                font-family="'Barlow Condensed', 'Barlow', system-ui, sans-serif"
+                text-anchor="middle"
+                dominant-baseline="central"
+                letter-spacing="1.2"
+              >
+                EN ESPERA
+              </text>
+            </g>
+
+            <!-- 7. Demarcación vial para plaza OCUPADA: rótulo limpio y profesional OCUPADO (sin moto ni sombras) -->
+            <g v-if="bahia.estado === 'OCUPADO'" opacity="0.95">
+              <text
+                x="25"
+                y="0"
+                fill="#dc2626"
+                font-size="9.5"
+                font-weight="900"
+                font-family="'Barlow Condensed', 'Barlow', system-ui, sans-serif"
+                text-anchor="middle"
+                dominant-baseline="central"
+                letter-spacing="1.5"
+              >
+                OCUPADO
+              </text>
+            </g>
+
+            <!-- 8. Sensor IoT inteligente de plaza con halo LED -->
+            <g transform="translate(80, 0)">
+              <!-- Halo luminoso proyectado al pavimento -->
+              <circle
+                cx="0"
+                cy="0"
+                r="18"
+                :fill="bahia.estado === 'LIBRE' ? 'url(#sensor-glow-green)' : bahia.estado === 'OCUPADO' ? 'url(#sensor-glow-red)' : 'url(#sensor-glow-amber)'"
+              />
+              <!-- Carcasa metálica del sensor de plaza -->
+              <circle cx="0" cy="0" r="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+              <!-- Lente LED activa -->
+              <circle
+                cx="0"
+                cy="0"
+                r="3.8"
+                :fill="bahia.estado === 'LIBRE' ? '#15803d' : bahia.estado === 'OCUPADO' ? '#dc2626' : '#b45309'"
+                stroke="#ffffff"
+                stroke-width="0.8"
+                :class="bahia.estado === 'LIBRE' ? 'animate-pulse' : ''"
+              />
+              <!-- Brillo especular en lente -->
+              <circle cx="-1.2" cy="-1.2" r="1" fill="#ffffff" opacity="0.85" />
+            </g>
+
+            <!-- 9. Efecto de foco al pasar el cursor (hover highlight) -->
+            <rect
+              x="-95"
+              y="-65"
+              width="190"
+              height="130"
+              rx="4"
+              fill="none"
+              stroke="#38bdf8"
+              stroke-width="2.5"
+              class="opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none"
+            />
           </g>
         </g>
       </g>
 
-      <!-- Motos en movimiento -->
-      <MotoAnimada v-for="anim in animaciones" :key="anim.id" :anim="anim" />
+      <!-- 5. MOTOCICLETAS EN MOVIMIENTO / SIMULACIÓN VIAL -->
+      <g v-for="anim in animaciones" :key="anim.id">
+        <g
+          :transform="`translate(${(anim.posicionActual.x / 100) * ANCHO_PLANO}, ${(anim.posicionActual.y / 100) * ALTO_PLANO})`"
+          filter="url(#shadow-unisucre)"
+        >
+          <g :transform="`rotate(${anim.posicionActual.rotacion})`">
+            <MotoFigura
+              :modelo="anim.modelo ?? 'clasica'"
+              :color="anim.color ?? '#15803d'"
+              :cascoColor="anim.cascoColor ?? '#eab308'"
+              :faro="anim.etapa !== 'esperando'"
+              :pata="false"
+              :etiqueta="anim.etapa === 'esperando'
+                ? 'ESPERANDO'
+                : anim.tipo === 'salida'
+                  ? 'SALIENDO'
+                  : `ASIGNADA ${anim.espacioId}`"
+            />
+          </g>
+        </g>
+      </g>
     </svg>
   </div>
 </template>

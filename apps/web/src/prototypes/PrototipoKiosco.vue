@@ -51,20 +51,20 @@ const estado = computed<Estado>(() =>
 
 const COLOR_CLARO: Record<Estado, string> = {
   normal: "text-emerald-700", movimiento: "text-blue-700",
-  espera: "text-amber-700", lleno: "text-amber-700", bloqueada: "text-red-600",
+  espera: "text-sky-700", lleno: "text-red-600", bloqueada: "text-red-600",
 };
 const COLOR_ASFALTO: Record<Estado, string> = {
   normal: "text-[#4ade80]", movimiento: "text-[#93c5fd]",
-  espera: "text-[#fcd34d]", lleno: "text-[#fcd34d]", bloqueada: "text-[#f87171]",
+  espera: "text-[#38bdf8]", lleno: "text-[#f87171]", bloqueada: "text-[#f87171]",
 };
 const TITULO: Record<Estado, string> = {
   normal: "Acceso habilitado", movimiento: "Movimiento en curso",
   espera: "Moto en espera", lleno: "Aforo completo", bloqueada: "Acceso suspendido",
 };
 const cupoColor = computed(() =>
-  bloqueada.value ? "text-red-600" : isFull.value ? "text-amber-700" : "text-[#15803d]");
+  bloqueada.value ? "text-red-600" : isFull.value ? "text-red-600" : "text-[#15803d]");
 const cupoColorAsfalto = computed(() =>
-  bloqueada.value ? "text-[#f87171]" : isFull.value ? "text-[#fcd34d]" : "text-[#4ade80]");
+  bloqueada.value ? "text-[#f87171]" : isFull.value ? "text-[#f87171]" : "text-[#4ade80]");
 
 // ---------- Picker (spec verbatim de PICKER.md) ----------
 const VARIANTES = ["Sereno", "Señalética", "Pantalla completa"];

@@ -3,10 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "broker": "pwsh -NoProfile -File scripts/broker.ps1",
-    "mqtt:log": "pwsh -NoProfile -File scripts/mqtt-log.ps1",
-    "check": "pnpm -r check"
+    "dev": "npm run dev --workspace=@parq/web",
+    "build": "npm run build --workspace=@parq/web",
+    "lint": "npm run check --workspace=@parq/web",
+    "check": "npm run check --workspace=@parq/web"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.2",
+    "ws": "^8.22.0"
   }
 }

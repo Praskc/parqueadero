@@ -135,7 +135,7 @@ const fotoceldaInterrumpida = computed(() =>
               <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">UNISUCRE</span>
             </div>
             <p class="text-[11px] text-slate-500 hidden sm:block">
-              Supervisión de acceso vehicular, telemetría IoT, gráficos en tiempo real y bloqueo de barrera
+              Supervisión de acceso vehicular, libro de registros en vivo, gráficos de ocupación diaria y control de talanquera
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ const fotoceldaInterrumpida = computed(() =>
         <div class="text-center">
           <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-900">Acceso de operador requerido</h3>
           <p class="text-xs text-slate-500 mt-1 max-w-xs">
-            Ingresa el token de vigilancia para desbloquear el control de acceso, la telemetría y la analítica.
+            Ingresa la clave de vigilancia para acceder al control de portería, sensores y libro de registros.
           </p>
         </div>
         <form class="w-full max-w-xs flex flex-col gap-2" @submit.prevent="desbloquear">
@@ -176,7 +176,7 @@ const fotoceldaInterrumpida = computed(() =>
             spellcheck="false"
             :disabled="verificando"
             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm text-slate-800 bg-white shadow-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            placeholder="Token…"
+            placeholder="Token (ej: unisucre-admin-token-2026)"
           />
           <p v-if="errorToken" class="text-[11px] font-semibold text-red-600">{{ errorToken }}</p>
           <button
@@ -224,7 +224,7 @@ const fotoceldaInterrumpida = computed(() =>
           <svg v-else-if="t === 'control'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
           <svg v-else-if="t === 'telemetria'" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" /></svg>
           <svg v-else class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
-          <span>{{ t === 'graficos' ? 'Gráficos y Analítica' : t === 'control' ? 'Control y Maniobras' : t === 'telemetria' ? 'Telemetría de Sensores' : 'Registro MQTT' }}</span>
+          <span>{{ t === 'graficos' ? 'Gráficos de Ocupación' : t === 'control' ? 'Control de Portería' : t === 'telemetria' ? 'Sensores por Bahía' : 'Libro de Registros' }}</span>
           <span v-if="t === 'graficos'" class="w-2 h-2 rounded-full bg-emerald-500" />
           <span v-if="t === 'eventos' && logMqtt.length" class="px-1.5 py-0.2 rounded-full text-[9px] bg-slate-200 text-slate-700 font-mono">{{ logMqtt.length }}</span>
         </button>
@@ -299,7 +299,7 @@ const fotoceldaInterrumpida = computed(() =>
                 </div>
                 <p class="text-xs text-slate-600 mt-1 max-w-md">
                   {{ bloqueada
-                    ? "Talanquera bloqueada en posición cerrada cruzando la calzada. El paso de vehículos está suspendido (comando al nodo ESP32 diferido en §10)."
+                    ? "Talanquera asegurada en posición cerrada. El paso de motocicletas queda temporalmente suspendido."
                     : "La talanquera opera en modo automático al detectar vehículos en la entrada." }}
                 </p>
               </div>
@@ -443,19 +443,32 @@ const fotoceldaInterrumpida = computed(() =>
               </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5 w-full">
+            <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 w-full">
               <button
                 v-for="b in bahias"
                 :key="b.id"
                 type="button"
-                class="p-2 rounded-lg border text-center transition-colors cursor-pointer flex flex-col items-center gap-1 min-w-0 overflow-hidden shadow-xs"
+                class="p-2 rounded-t-lg border-t-2 border-x-2 text-center transition-all cursor-pointer flex flex-col items-center gap-1 min-w-0 overflow-hidden shadow-xs relative group"
                 :class="b.estado === 'LIBRE'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                  : 'bg-red-50 border-red-300 text-red-800 hover:bg-red-100'"
+                  ? 'bg-emerald-50/80 border-emerald-500 text-emerald-900 hover:bg-emerald-100'
+                  : 'bg-red-50/80 border-red-500 text-red-900 hover:bg-red-100'"
                 @click="forzarEstado(b.id)"
               >
-                <span class="font-extrabold text-xs truncate">{{ b.id }}</span>
-                <span class="text-[9px] font-bold uppercase truncate">{{ b.estado }}</span>
+                <!-- Mini tope de llanta -->
+                <div class="w-8 h-1 bg-slate-700 rounded-xs flex justify-around px-0.5">
+                  <span class="w-1 h-full bg-amber-400" />
+                  <span class="w-1 h-full bg-amber-400" />
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="font-mono font-black text-xs">{{ b.id }}</span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="b.estado === 'LIBRE' ? 'bg-emerald-500' : 'bg-red-500'"
+                  />
+                </div>
+                <span class="text-[9px] font-bold uppercase tracking-wider truncate" :class="b.estado === 'LIBRE' ? 'text-emerald-700' : 'text-red-700'">
+                  {{ b.estado }}
+                </span>
               </button>
             </div>
           </div>
@@ -466,7 +479,7 @@ const fotoceldaInterrumpida = computed(() =>
                 <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                 Simulación Autónoma de Demostración
               </div>
-              <div class="text-[11px] text-slate-500">Genera llegadas y salidas periódicas publicadas por MQTT real</div>
+              <div class="text-[11px] text-slate-500">Genera llegadas y salidas de motos para simular el tráfico en portería</div>
             </div>
             <button
               type="button"
@@ -480,16 +493,16 @@ const fotoceldaInterrumpida = computed(() =>
           </div>
         </div>
 
-        <!-- PESTAÑA 3: TELEMETRÍA -->
+        <!-- PESTAÑA 3: SENSORES -->
         <div v-show="tabActivo === 'telemetria'" class="space-y-4">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>
-                Telemetría de Bahías en Tiempo Real (WS ← MQTT)
+                Estado de Bahías en Tiempo Real
               </h3>
               <p class="text-[11px] text-slate-500">
-                Estado vivo por plaza, último cambio y desde dónde se reportó
+                Ocupación por celda, último cambio y punto de registro
               </p>
             </div>
             <span class="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -563,14 +576,14 @@ const fotoceldaInterrumpida = computed(() =>
           </div>
         </div>
 
-        <!-- PESTAÑA 4: REGISTRO MQTT -->
+        <!-- PESTAÑA 4: LIBRO DE REGISTROS -->
         <div v-show="tabActivo === 'eventos'" class="space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <svg class="w-4 h-4 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
-              Registro de Mensajes Mosquitto MQTT en Vivo
+              Libro Digital de Accesos y Movimientos en Vivo
             </h3>
-            <span class="text-[11px] font-mono text-slate-500">{{ PATRON_TOPIC }}</span>
+            <span class="text-[11px] font-mono text-slate-500">Planilla de control diario</span>
           </div>
 
           <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
@@ -579,15 +592,15 @@ const fotoceldaInterrumpida = computed(() =>
                 <thead class="bg-slate-100 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200 sticky top-0">
                   <tr>
                     <th class="px-3 py-2">Hora</th>
-                    <th class="px-3 py-2">Tópico MQTT</th>
+                    <th class="px-3 py-2">Punto de Registro</th>
                     <th class="px-3 py-2">Estado</th>
-                    <th class="px-3 py-2">QoS</th>
-                    <th class="px-3 py-2">Dirección</th>
+                    <th class="px-3 py-2">Confirmación</th>
+                    <th class="px-3 py-2">Tipo de Movimiento</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-mono text-[11px]">
                   <tr v-if="logMqtt.length === 0" class="text-slate-400">
-                    <td colspan="5" class="px-3 py-6 text-center">Esperando eventos MQTT del broker…</td>
+                    <td colspan="5" class="px-3 py-6 text-center">Esperando nuevos movimientos en portería…</td>
                   </tr>
                   <tr
                     v-for="log in logMqtt.slice(0, 30)"
@@ -602,12 +615,12 @@ const fotoceldaInterrumpida = computed(() =>
                         :class="log.estado === 'LIBRE' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'"
                       >{{ log.estado }}</span>
                     </td>
-                    <td class="px-3 py-1.5 text-slate-600">QoS {{ log.qos }}</td>
+                    <td class="px-3 py-1.5 text-slate-600 font-sans font-semibold">Registrado</td>
                     <td class="px-3 py-1.5">
                       <span
                         class="font-bold"
                         :class="log.direccion === 'in' ? 'text-emerald-700' : 'text-sky-700'"
-                      >{{ log.direccion === "in" ? "RECEPCIÓN (IN)" : "PUBLICACIÓN (OUT)" }}</span>
+                      >{{ log.direccion === "in" ? "DETECCIÓN SENSOR (ENTRADA)" : "ORDEN DE PORTERÍA (SALIDA)" }}</span>
                     </td>
                   </tr>
                 </tbody>
@@ -615,7 +628,7 @@ const fotoceldaInterrumpida = computed(() =>
             </div>
           </div>
           <p class="text-[10px] text-slate-400">
-            IN: eventos reales reenviados por el backend (origen broker). OUT: publicaciones de esta consola vía REST → MQTT. Compara con <code>pnpm mqtt:log</code> en la terminal.
+            Registro automático de los ingresos, salidas y cambios de estado captados por los sensores de portería y celdas de parqueo.
           </p>
         </div>
       </div>

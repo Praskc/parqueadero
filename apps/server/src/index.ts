@@ -21,9 +21,16 @@ const app = await buildApp({
   snapshot: snap,
   historial: (id) => historial(config.lote, id),
   eventosHoy: () => eventosHoy(config.lote),
-  publicarEstado: (espacio, estado, nodo) =>
-    mq.publish(topicEstado(config.lote, nodo ?? config.nodoAdmin, espacio),
-      JSON.stringify({ v: 1, estado, ts: Date.now() }), { qos: 1, retain: true }),
+  publicarEstado: (espacio, estado, nodo) => {
+    try {
+      mq.publish(topicEstado(config.lote, nodo ?? config.nodoAdmin, espacio),
+        JSON.stringify({ v: 1, estado, ts: Date.now() }), { qos: 1, retain: true });
+    } catch {}
+    if (!mq.connected) {
+      save({ lote: config.lote, espacio, estado, nodo: nodo ?? config.nodoAdmin, ts: Date.now() });
+      broadcast({ type: "espacio", lote: config.lote, espacio, estado, nodo: nodo ?? config.nodoAdmin, ts: Date.now() });
+    }
+  },
   onConexion: (sock) => {
     attach(sock);
     sock.send(JSON.stringify({ snapshot: snap() }));
