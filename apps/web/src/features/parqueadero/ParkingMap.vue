@@ -15,11 +15,11 @@ const props = defineProps<{
 defineEmits<{ (e: "select-espacio", id: string): void }>();
 
 const barrierAngle = computed(() => {
-  if (props.bloqueada || props.talanquera === "bloqueada" || props.talanquera === "cerrada") return 0;
-  if (props.talanquera === "abierta") return -85;
-  if (props.talanquera === "abriendo") return -50;
-  if (props.talanquera === "cerrando") return -25;
-  return 0;
+  // El brazo nace apuntando hacia abajo y cruza el carril (cerrado).
+  // Al abrir gira 90° hacia el andén: deja libre el paso y no invade
+  // la plaza E01, que era lo que pasaba al girar hacia la derecha.
+  if (props.bloqueada || props.talanquera === "bloqueada") return 0;
+  return props.talanquera === "abriendo" || props.talanquera === "abierta" ? 90 : 0;
 });
 </script>
 
@@ -240,21 +240,22 @@ const barrierAngle = computed(() => {
       <g id="talanquera-unisucre" transform="translate(235, 210)">
         <rect x="-13" y="-26" width="26" height="34" rx="4" fill="#ea580c" stroke="#c2410c" stroke-width="1.5" />
         <rect x="-7" y="-20" width="14" height="10" rx="2" fill="#0f172a" />
-        <circle cx="0" cy="-15" r="3.5" :fill="bloqueada || talanquera === 'cerrada' || talanquera === 'bloqueada' ? '#ef4444' : '#22c55e'" />
-        <g :transform="`rotate(${barrierAngle}, 0, 0)`" class="transition-transform duration-500 ease-out">
+        <circle cx="0" cy="-15" r="3.5" :fill="bloqueada || talanquera === 'cerrada' || talanquera === 'bloqueada' || talanquera === 'cerrando' ? '#ef4444' : '#22c55e'" />
+        <g :transform="`rotate(${barrierAngle}, 0, 0)`" class="talanquera-brazo">
           <rect x="-4" y="0" width="8" height="135" rx="3" fill="#ffffff" stroke="#b91c1c" stroke-width="1" />
           <rect x="-4" y="15" width="8" height="18" fill="#dc2626" />
           <rect x="-4" y="45" width="8" height="18" fill="#dc2626" />
           <rect x="-4" y="75" width="8" height="18" fill="#dc2626" />
           <rect x="-4" y="105" width="8" height="18" fill="#dc2626" />
           <circle cx="0" cy="132" r="3.5" fill="#ffffff" stroke="#dc2626" stroke-width="0.8" />
-          <g v-if="bloqueada" transform="translate(0, 68)">
-            <rect x="-40" y="-10" width="80" height="20" rx="3" fill="#dc2626" stroke="#ffffff" stroke-width="1.5" />
-            <text x="0" y="4" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PASO BLOQUEADO</text>
-          </g>
         </g>
         <circle cx="0" cy="0" r="6" fill="#334155" stroke="#f8fafc" stroke-width="1.5" />
+        <g v-if="bloqueada" transform="translate(-52, 0)">
+          <rect x="-40" y="-10" width="80" height="20" rx="3" fill="#dc2626" stroke="#ffffff" stroke-width="1.5" />
+          <text x="0" y="4" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">PASO BLOQUEADO</text>
+        </g>
       </g>
+      <!-- Soporte del brazo cuando está cerrado, al final del carril. -->
       <rect x="229" y="342" width="12" height="14" rx="2" fill="#ea580c" />
 
       <!-- 4. PATIO: Calzada y Grilla de Parqueadero Completa (x: 260 a 980, y: 50 a 510) -->
