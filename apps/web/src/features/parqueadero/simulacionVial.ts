@@ -51,14 +51,49 @@ const DUR_SALIDA = REDUCIR ? 800 : 3000;
 
 const uid = () => Math.random().toString(36).substring(2, 9);
 
+const MODELOS: ("scooter" | "clasica" | "enduro" | "deportiva")[] = [
+  "scooter",
+  "clasica",
+  "enduro",
+  "deportiva",
+];
+const COLORES = [
+  "#15803d", // Verde institucional
+  "#0284c7", // Azul eléctrico
+  "#dc2626", // Rojo vivo
+  "#ea580c", // Naranja
+  "#0f172a", // Negro grafito
+  "#d97706", // Ámbar
+  "#475569", // Gris titanio
+];
+const CASCOS = [
+  "#eab308", // Amarillo seguridad
+  "#ffffff", // Blanco
+  "#0f172a", // Negro mate
+  "#ef4444", // Rojo
+  "#38bdf8", // Azul cielo
+];
+
+function randomMotoProps() {
+  const modelo = MODELOS[Math.floor(Math.random() * MODELOS.length)];
+  const color = COLORES[Math.floor(Math.random() * COLORES.length)];
+  const cascoColor = CASCOS[Math.floor(Math.random() * CASCOS.length)];
+  return { modelo, color, cascoColor };
+}
+
 /**
  * Inserta la animación y devuelve SIEMPRE el proxy reactivo.
  * Escribir sobre el objeto crudo después de `set()` no dispara Vue:
  * todos los tween deben mutar este proxy, no la referencia original.
  */
 function addAnim(a: AnimacionMoto): AnimacionMoto {
-  anims.set(a.id, a);
-  return anims.get(a.id)!;
+  const props = randomMotoProps();
+  const completo: AnimacionMoto = {
+    ...props,
+    ...a,
+  };
+  anims.set(completo.id, completo);
+  return anims.get(completo.id)!;
 }
 
 
@@ -151,28 +186,30 @@ function tween(anim: AnimacionMoto, durMs: number, frame: (p: number) => void, d
 function tramoRuta(anim: AnimacionMoto, espacioId: string, publicarAlFinal: boolean) {
   const bahia = BAHIA_LAYOUT.find((b) => b.id === espacioId);
   if (!bahia) return;
-  const corredorPct = CIRCULACION.corredorY; // y% del corredor
-  const startY = anim.posicionActual.y;      // y% del carril de portería
+  const corredorPct = CIRCULACION.corredorY; // y% del corredor (50%)
+  const startY = anim.posicionActual.y;
   const objetivo = { x: bahia.posicion.x, y: bahia.posicion.y, rot: bahia.posicion.rotacion };
   const rotFinal = objetivo.rot === 90 ? -90 : 90;
   const corredorX = 27; // x% donde la rampa empalma con el corredor
   tween(anim, DUR_RUTA, (p) => {
     let x = 18, y = startY, rot = 0;
-    if (p < 0.2) {
-      // portería → corredor: baja y gira a la derecha (pasa bajo la talanquera)
-      const q = p / 0.2;
+    if (p < 0.22) {
+      // portería → corredor: avanza y empalma suavemente con el corredor central
+      const q = p / 0.22;
       x = 18 + q * (corredorX - 18);
       y = startY + q * (corredorPct - startY);
+      rot = 0;
       anim.etapa = "talanquera";
-    } else if (p < 0.8) {
-      // avanza por el corredor hasta la columna del puesto
-      const q = (p - 0.2) / 0.6;
+    } else if (p < 0.78) {
+      // avanza por el corredor central hasta la columna del puesto asignado
+      const q = (p - 0.22) / 0.56;
       x = corredorX + q * (objetivo.x - corredorX);
       y = corredorPct;
+      rot = 0;
       anim.etapa = "ruta";
     } else {
-      // entra al puesto
-      const q = (p - 0.8) / 0.2;
+      // gira suavemente y entra al puesto
+      const q = (p - 0.78) / 0.22;
       x = objetivo.x;
       y = corredorPct + q * (objetivo.y - corredorPct);
       rot = q * rotFinal;
@@ -203,36 +240,37 @@ function animarSalida(espacioId: string, publicarAlFinal: boolean, retardoMs = 0
   const ini = { ...bahia.posicion };
   const corredorPct = CIRCULACION.corredorY;
   const corredorX = 27;
+  const exitLaneY = CIRCULACION.entradaY[1];
   window.setTimeout(() => {
     if (!anims.has(anim.id)) return;
     tween(anim, DUR_SALIDA, (p) => {
       let x = ini.x, y = ini.y, rot = ini.rotacion;
-      if (p < 0.15) {
-        // sale del puesto al corredor
-        const q = p / 0.15;
+      if (p < 0.2) {
+        // sale del puesto hacia el corredor central y gira hacia el oeste (rot = 180)
+        const q = p / 0.2;
         y = ini.y + q * (corredorPct - ini.y);
-        rot = ini.rotacion + q * (0 - ini.rotacion);
+        rot = ini.rotacion + q * (180 - ini.rotacion);
         anim.etapa = "estacionando";
-      } else if (p < 0.6) {
+      } else if (p < 0.65) {
         // avanza por el corredor hacia la portería
-        const q = (p - 0.15) / 0.45;
+        const q = (p - 0.2) / 0.45;
         x = ini.x + q * (corredorX - ini.x);
         y = corredorPct;
-        rot = 0;
+        rot = 180;
         anim.etapa = "ruta";
       } else if (p < 0.85) {
-        // corredor → carril de portería (la diagonal del ingreso, invertida)
-        const q = (p - 0.6) / 0.25;
-        x = corredorX + q * (18 - corredorX);
-        y = corredorPct + q * (CIRCULACION.entradaY[0] - corredorPct);
-        rot = 0;
+        // corredor → carril de salida de la rampa
+        const q = (p - 0.65) / 0.2;
+        x = corredorX + q * (14 - corredorX);
+        y = corredorPct + q * (exitLaneY - corredorPct);
+        rot = 180;
         anim.etapa = "ruta";
       } else {
-        // sale a la calle exterior
+        // sale a la calle exterior integrándose al flujo
         const q = (p - 0.85) / 0.15;
-        x = 18 + q * (5 - 18);
-        y = CIRCULACION.entradaY[0] + q * (-6 - CIRCULACION.entradaY[0]);
-        rot = -90;
+        x = 14 + q * (9.2 - 14);
+        y = exitLaneY + q * (105 - exitLaneY);
+        rot = 180 - q * 90;
         anim.etapa = "ruta";
       }
       anim.posicionActual = { x, y, rotacion: rot };
@@ -262,15 +300,19 @@ export function ingreso(
     espacioId: target ?? "EN_ESPERA",
     origen,
     etapa: "aproximacion",
-    posicionActual: { x: origen === "norte" ? 4.3 : 8.1, y: origen === "norte" ? -3.5 : 103.5, rotacion: origen === "norte" ? 90 : -90 },
+    posicionActual: {
+      x: origen === "norte" ? 3.8 : 9.2,
+      y: origen === "norte" ? -4 : 104,
+      rotacion: origen === "norte" ? 90 : -90,
+    },
   });
 
   notificar(
     "ingreso",
     `Vehículo en carril ${origen === "norte" ? "Norte" : "Sur"}`,
     debeEsperar
-      ? "Aforo completo o portería bloqueada: la moto quedará en espera frente a la talanquera."
-      : `Motocicleta girando a portería. Asignando plaza ${target}...`,
+      ? "Aforo completo o portería bloqueada: la moto esperará frente a la talanquera."
+      : `Motocicleta ingresando por portería. Asignando plaza ${target}...`,
     target,
     "media",
   );
@@ -285,27 +327,45 @@ function animarIngresoConEspera(
   debeEsperar: boolean,
   origen: Origen,
 ) {
-  // Fase de calle: de la vía exterior a la puerta de la portería.
+  // Fase de calle: de la vía exterior a la puerta de la portería
   const laneY = CIRCULACION.entradaY[0];
-  const inicio = origen === "norte" ? { x: 4.3, y: -3.5, rot: 90 } : { x: 8.1, y: 103.5, rot: -90 };
+  const inicio = origen === "norte" ? { x: 3.8, y: -4, rot: 90 } : { x: 9.2, y: 104, rot: -90 };
   tween(anim, DUR_CALLE, (p) => {
     let x = inicio.x, y = inicio.y, rot = inicio.rot;
     if (origen === "norte") {
-      if (p < 0.55) { const q = p / 0.55; x = 4.3 + q * 3; y = -3.5 + q * (laneY - 3.5 - -3.5); rot = 90 - q * 45; }
-      else { const q = (p - 0.55) / 0.45; x = 7.3 + q * 10.7; y = laneY - 6 + q * 6; rot = 45 - q * 45; }
+      if (p < 0.55) {
+        const q = p / 0.55;
+        x = 3.8;
+        y = -4 + q * (laneY - 10 - -4);
+        rot = 90;
+      } else {
+        const q = (p - 0.55) / 0.45;
+        x = 3.8 + q * (18 - 3.8);
+        y = (laneY - 10) + q * 10;
+        rot = 90 - q * 90;
+      }
     } else {
-      if (p < 0.55) { const q = p / 0.55; x = 8.1 + q * 2.4; y = 103.5 - q * (103.5 - (laneY + 8)); rot = -90 + q * 45; }
-      else { const q = (p - 0.55) / 0.45; x = 10.5 + q * 7.5; y = laneY + 8 - q * 8; rot = -45 + q * 45; }
+      if (p < 0.55) {
+        const q = p / 0.55;
+        x = 9.2;
+        y = 104 - q * (104 - (laneY + 10));
+        rot = -90;
+      } else {
+        const q = (p - 0.55) / 0.45;
+        x = 9.2 + q * (18 - 9.2);
+        y = (laneY + 10) - q * 10;
+        rot = -90 + q * 90;
+      }
     }
     anim.posicionActual = { x, y, rotacion: rot };
   }, () => {
     if (debeEsperar || !target) {
-      // Fila hacia atrás: cada moto en espera 11 unidades detrás de la anterior
+      // Fila hacia atrás: cada moto en espera se ubica ordenadamente
       const fila = [...anims.values()].filter((a) => a.etapa === "esperando").length;
       anim.etapa = "esperando";
-      anim.posicionActual = { x: 18 - fila * 11, y: laneY, rotacion: 0 };
+      anim.posicionActual = { x: 18 - fila * 7, y: laneY, rotacion: 0 };
       sonido.lleno();
-      notificar("lleno", "Motocicleta en espera", "Detenida en el sensor de portería esperando una plaza libre.", undefined, "alta");
+      notificar("lleno", "Motocicleta en espera", "Detenida en el sensor de portería esperando un puesto libre.", undefined, "alta");
       return;
     }
     abrirTalanquera();
@@ -316,7 +376,7 @@ function animarIngresoConEspera(
 export function salida(targetId?: string) {
   const target = targetId && estados[targetId] === "OCUPADO" && !bahiaReservada(targetId) ? targetId : primeraOcupada();
   if (!target) return;
-  notificar("salida", `Salida de plaza ${target}`, "Motocicleta saliendo del campus hacia el carril de salida.", target, "media");
+  notificar("salida", `Salida de plaza ${target}`, "Motocicleta saliendo hacia la calzada de salida.", target, "media");
   animarSalida(target, true, retardoPorTrafico());
 }
 
@@ -341,11 +401,11 @@ export function toggleBloqueo() {
   if (bloqueada.value) {
     talanquera.value = "bloqueada";
     sonido.lleno();
-    notificar("bloqueo", "Portería bloqueada", "Talanquera cerrada por vigilancia institucional. Ingreso restringido. (Bloqueo visual; el comando al nodo está en §10.)", undefined, "alta");
+    notificar("bloqueo", "Portería bloqueada", "Talanquera asegurada por vigilancia institucional. Paso restringido temporalmente.", undefined, "alta");
   } else {
     talanquera.value = "cerrada";
     sonido.talanquera();
-    notificar("sistema", "Talanquera habilitada", "Portería reabierta para la comunidad universitaria.", undefined, "media");
+    notificar("sistema", "Talanquera habilitada", "Portería reabierta para el ingreso de motocicletas.", undefined, "media");
     resolverEsperas();
   }
 }
@@ -398,7 +458,7 @@ function onEventoReal(id: string, estado: Estado) {
   if (propio) return;
   if (estado === "OCUPADO") {
     sonido.parqueo();
-    notificar("ingreso", `Plaza ${id} ocupada`, "Cambio recibido por MQTT (sensor o admin externo).", id, "baja");
+    notificar("ingreso", `Plaza ${id} ocupada`, "Ocupación registrada por el sensor de celda.", id, "baja");
     if (bahiaReservada(id)) return; // ya hay una moto de camino a esa bahía
     const retardo = retardoPorTrafico();
     const anim = addAnim({
@@ -415,7 +475,7 @@ function onEventoReal(id: string, estado: Estado) {
       tramoRuta(anim, id, false);
     }, retardo);
   } else {
-    notificar("salida", `Plaza ${id} liberada`, "Bahía desocupada (telemetría MQTT).", id, "baja");
+    notificar("salida", `Plaza ${id} liberada`, "Bahía desocupada (sensor de celda).", id, "baja");
     if (!bahiaReservada(id)) animarSalida(id, false, retardoPorTrafico());
   }
 }

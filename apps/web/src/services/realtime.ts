@@ -21,14 +21,25 @@ export function onMensaje(h: Handler): () => void {
 }
 
 function conn() {
-  const w = new WebSocket(`ws://${location.host}/ws`);
-  w.onopen = () => (conectado.value = true);
-  w.onclose = () => {
+  try {
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    const w = new WebSocket(`${protocol}//${location.host}/ws`);
+    w.onopen = () => (conectado.value = true);
+    w.onerror = () => {
+      conectado.value = false;
+    };
+    w.onclose = () => {
+      conectado.value = false;
+      setTimeout(conn, 2000);
+    };
+    w.onmessage = (ev) => {
+      try {
+        const m = JSON.parse(ev.data) as MensajeWs;
+        for (const h of handlers) h(m);
+      } catch {}
+    };
+  } catch {
     conectado.value = false;
     setTimeout(conn, 2000);
-  };
-  w.onmessage = (ev) => {
-    const m = JSON.parse(ev.data) as MensajeWs;
-    for (const h of handlers) h(m);
-  };
+  }
 }

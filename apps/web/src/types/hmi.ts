@@ -39,4 +39,7 @@ export interface AnimacionMoto {
   origen?: Origen;
   etapa: EtapaMoto;
   posicionActual: PosicionMapa;
+  modelo?: "scooter" | "clasica" | "enduro" | "deportiva";
+  color?: string;
+  cascoColor?: string;
 }
