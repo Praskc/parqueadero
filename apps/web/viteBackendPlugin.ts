@@ -19,24 +19,30 @@ interface FilaOcupacion {
 
 export function backendPlugin(): Plugin {
   const lote = "lote_unisucre";
-  const ids = Array.from({ length: 10 }, (_, i) => `E${String(i + 1).padStart(2, "0")}`);
+  const ids = Array.from({ length: 30 }, (_, i) => `E${String(i + 1).padStart(2, "0")}`);
   const estadosMap = new Map<string, FilaEspacio>();
   const ocupacionList: FilaOcupacion[] = [];
   let nextId = 1;
 
-  // Situación inicial realista del parqueadero (4 ocupadas, 6 libres)
-  const initialOccupied = new Set(["E01", "E04", "E07", "E10"]);
+  // Ocupación inicial distribuida en los tres estamentos (18 ocupadas, 12 libres)
+  const initialOccupied = new Set([
+    "E02", "E05", "E07", "E09",
+    "E11", "E12", "E14", "E16", "E18", "E20",
+    "E21", "E22", "E23", "E25", "E26", "E28", "E29", "E30",
+  ]);
   const now = Date.now();
-  for (const id of ids) {
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
     const estado: Estado = initialOccupied.has(id) ? "OCUPADO" : "LIBRE";
-    estadosMap.set(id, { espacio: id, estado, ts: now - Math.floor(Math.random() * 3600000) });
+    const ts = now - (4000 + ((i * 1700) % 28000));
+    estadosMap.set(id, { espacio: id, estado, ts });
     ocupacionList.push({
       id: nextId++,
       lote,
       espacio: id,
       estado,
       nodo: "porteria",
-      ts: now - Math.floor(Math.random() * 3600000),
+      ts,
     });
   }
 

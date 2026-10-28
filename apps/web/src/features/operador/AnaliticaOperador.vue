@@ -1,68 +1,64 @@
 <script setup lang="ts">
-/**
- * Analítica del operador — puerto a Vue nativo (SVG puro) del
- * "OperatorAnalyticsChart" de la maqueta (que era React + Recharts).
- * Todos los datos son reales:
- *  - Flujo horario / rotaciones / eventos por nodo: tabla `ocupacion` en
- *    SQLite vía GET /api/analitica/hoy.
- *  - Zonas y KPIs: estado en vivo del parqueadero (WS ← MQTT).
- */
+// Analítica diaria unificada sobre SQLite (/api/analitica/hoy) y estado en vivo de las 30 bahías por estamento.
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { getAnaliticaHoy, type EventoHoy } from "../../services/api";
 import { onMensaje } from "../../services/realtime";
+import { tema } from "../../shared/theme";
 import type { Bahia } from "../../types/hmi";
-
-type TabAnalitica = "flujo" | "bahias" | "zonas" | "rendimiento";
-const tab = ref<TabAnalitica>("flujo");
 
 const props = defineProps<{ bahias: Bahia[]; disponibles: number }>();
 
 const eventos = ref<EventoHoy[]>([]);
 const cargando = ref(false);
+const errorCarga = ref<string | null>(null);
 const ultimaCarga = ref<number | null>(null);
 let offWs: (() => void) | undefined;
 
 async function cargar() {
   cargando.value = true;
+  errorCarga.value = null;
   try {
     eventos.value = await getAnaliticaHoy();
     ultimaCarga.value = Date.now();
   } catch {
-    /* backend caído: los eventos en vivo siguen entrando por WS */
+    errorCarga.value = "No se pudo consultar el histórico diario del servidor. Mostrando únicamente los eventos en vivo de esta sesión.";
   } finally {
     cargando.value = false;
   }
 }
 
 onMounted(() => {
-  // Push en vivo: cada evento del broker entra por el mismo WS del HMI.
   offWs = onMensaje((m) => {
     if ("snapshot" in m) return;
-    if (eventos.value.some((e) => e.espacio === m.espacio && e.ts === m.ts)) return;
+    if (eventos.value.some((e) => e.espacio && e.espacio === m.espacio && e.ts === m.ts)) return;
     eventos.value.unshift({ espacio: m.espacio, estado: m.estado, nodo: m.nodo, ts: m.ts });
   });
-  void cargar(); // carga inicial: histórico de hoy desde SQLite
+  void cargar();
 });
 onUnmounted(() => offWs?.());
 
-// ---------- Métricas en vivo ----------
-const total = computed(() => props.bahias.length || 10);
-const ocupados = computed(() => total.value - props.disponibles);
+const total = computed(() => props.bahias.length || 30);
+const ocupados = computed(() => props.bahias.filter((b) => b.estado === "OCUPADO").length);
 const porcentaje = computed(() =>
   total.value === 0 ? 0 : Math.round((ocupados.value / total.value) * 100));
 const conDato = computed(() => props.bahias.filter((b) => b.ts !== null).length);
 
-// Dos zonas por fila del patio (Norte = E01-E05, Sur = E06-E10)
-const norte = computed(() => props.bahias.filter((b) => parseInt(b.id.slice(1), 10) <= 5));
-const sur = computed(() => props.bahias.filter((b) => parseInt(b.id.slice(1), 10) > 5));
+const estamentos = computed(() => {
+  const bloque = (nombre: string, rango: string, key: "estudiantes" | "docentes" | "administrativos") => {
+    const lista = props.bahias.filter((b) => b.estamento === key);
+    const cap = lista.length || 10;
+    const ocup = lista.filter((b) => b.estado === "OCUPADO").length;
+    const libres = lista.filter((b) => b.estado === "LIBRE").length;
+    const pct = Math.round((ocup / cap) * 100);
+    return { nombre, rango, total: cap, ocupadas: ocup, libres, pct };
+  };
+  return [
+    bloque("Estudiantes", "E01 a E10", "estudiantes"),
+    bloque("Docentes", "E11 a E20", "docentes"),
+    bloque("Administrativos", "E21 a E30", "administrativos"),
+  ];
+});
 
-const norteOcup = computed(() => norte.value.filter((b) => b.estado === "OCUPADO").length);
-const surOcup = computed(() => sur.value.filter((b) => b.estado === "OCUPADO").length);
-
-const norteLibre = computed(() => norte.value.length - norteOcup.value);
-const surLibre = computed(() => sur.value.length - surOcup.value);
-
-// ---------- Datos derivados de los eventos reales de hoy ----------
 const flujo = computed(() =>
   Array.from({ length: 13 }, (_, i) => 6 + i).map((h) => ({
     hora: `${String(h).padStart(2, "0")}:00`,
@@ -89,10 +85,8 @@ const rotacionesHoy = computed(() =>
   eventos.value.filter((e) => e.estado === "OCUPADO").length);
 const hayEventos = computed(() => eventos.value.length > 0);
 
-// ---------- Geometría SVG ----------
-const FW = 560, FH = 240, PL = 38, PR = 10, PT = 12, PB = 26;
+const FW = 620, FH = 205, PL = 34, PR = 12, PT = 14, PB = 26;
 
-/** Catmull-Rom → Bézier cúbico (curvas suaves tipo Recharts, sin Recharts). */
 function suavizar(pts: Array<[number, number]>): string {
   if (pts.length < 2) return "";
   if (pts.length === 2)
@@ -126,330 +120,268 @@ const pathSalidas = computed(() => suavizar(ptsSalidas.value));
 const baseY = computed(() => flujoY.value(0));
 const areaIngresos = computed(
   () => `${pathIngresos.value} L ${flujoX(12)} ${baseY.value} L ${flujoX(0)} ${baseY.value} Z`);
-const areaSalidas = computed(
-  () => `${pathSalidas.value} L ${flujoX(12)} ${baseY.value} L ${flujoX(0)} ${baseY.value} Z`);
 const ticksFlujo = computed(() =>
-  [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(MAX_FLUJO.value * f)));
+  [0, 0.5, 1].map((f) => Math.round(MAX_FLUJO.value * f)));
 
-// Barras por bahía
 const MAX_ROT = computed(() =>
   Math.max(4, ...props.bahias.map((b) => rotaciones.value.get(b.id) ?? 0)));
+const rotY = computed(
+  () => (v: number) => PT + (FH - PT - PB) * (1 - v / MAX_ROT.value));
 const barras = computed(() => {
-  const w = (FW - PL - PR) / (props.bahias.length || 1);
+  const n = props.bahias.length || 30;
+  const w = (FW - PL - PR) / n;
   return props.bahias.map((b, i) => {
     const rot = rotaciones.value.get(b.id) ?? 0;
-    const h = (rot / MAX_ROT.value) * (FH - PT - PB);
+    const h = Math.max(rot > 0 ? 3 : 1.5, (rot / MAX_ROT.value) * (FH - PT - PB));
     return {
       b,
+      idx: i,
       rot,
-      x: PL + i * w + w * 0.2,
-      ancho: w * 0.6,
+      x: PL + i * w + w * 0.16,
+      ancho: Math.max(4, w * 0.68),
       y: PT + (FH - PT - PB) - h,
       alto: h,
       cx: PL + i * w + w / 2,
       color:
-        b.estado === "OCUPADO" ? "#ef4444" : b.estado === "LIBRE" ? "#10b981" : "#f59e0b",
+        b.estado === "OCUPADO" ? "#dc2626" : b.estado === "LIBRE" ? "#15803d" : "#64748b",
     };
   });
 });
 
-// Donut de zonas
-const DONA_R = 52;
-const DONA_C = 2 * Math.PI * DONA_R;
-const segmentosZona = computed(() => {
-  const base = norte.value.length + sur.value.length || 1;
-  const partes = [
-    { valor: norteOcup.value, color: "#0284c7", titulo: `Norte ocupadas: ${norteOcup.value}` },
-    { valor: norteLibre.value, color: "#bae6fd", titulo: `Norte libres: ${norteLibre.value}` },
-    { valor: surOcup.value, color: "#7c3aed", titulo: `Sur ocupadas: ${surOcup.value}` },
-    { valor: surLibre.value, color: "#ddd6fe", titulo: `Sur libres: ${surLibre.value}` },
-  ];
-  let acc = 0;
-  return partes
-    .filter((p) => p.valor > 0)
-    .map((p) => {
-      const largo = (p.valor / base) * DONA_C;
-      const seg = {
-        ...p,
-        dash: `${Math.max(0.5, largo - 1)} ${DONA_C}`,
-        offset: DONA_C / 4 - acc,
-      };
-      acc += largo;
-      return seg;
-    });
-});
-
-const NODO_COLORES = ["#059669", "#0284c7", "#d97706", "#7c3aed", "#64748b"];
+function barraColorPct(pct: number): string {
+  if (pct >= 85) return tema.value === "oscuro" ? "bg-red-500" : "bg-[#dc2626]";
+  if (pct >= 65) return tema.value === "oscuro" ? "bg-[#facc15]" : "bg-[#eab308]";
+  return tema.value === "oscuro" ? "bg-emerald-500" : "bg-[#15803d]";
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4 w-full">
-    <!-- Selector de gráfico + resumen -->
-    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-200 pb-2.5">
-      <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl flex-wrap">
-        <button
-          v-for="t in (['flujo','bahias','zonas','rendimiento'] as const)"
-          :key="t"
-          type="button"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-          :class="tab === t ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
-          @click="tab = t"
-        >
-          <svg v-if="t === 'flujo'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
-          <svg v-else-if="t === 'bahias'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></svg>
-          <svg v-else-if="t === 'zonas'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>
-          <svg v-else class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-          <span>{{ t === 'flujo' ? 'Flujo Horario' : t === 'bahias' ? 'Uso por Bahía (E01-E10)' : t === 'zonas' ? 'Zonas Norte/Sur' : 'Rendimiento y Orígenes' }}</span>
-        </button>
+    <!-- Banda superior de indicadores diarios y sincronización (sin subpestañas anidadas) -->
+    <div
+      class="rounded-xl border grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x"
+      :class="tema === 'oscuro' ? 'bg-slate-900/50 border-slate-800 divide-slate-800' : 'bg-white border-slate-200 divide-slate-200'"
+    >
+      <div class="p-3.5 flex flex-col justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wide" :class="tema === 'oscuro' ? 'text-slate-300' : 'text-slate-600'">Ocupación actual</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-xl font-bold font-mono tabular-nums" :class="porcentaje >= 85 ? (tema === 'oscuro' ? 'text-red-400' : 'text-[#b91c1c]') : porcentaje >= 65 ? (tema === 'oscuro' ? 'text-[#facc15]' : 'text-[#8a6d00]') : (tema === 'oscuro' ? 'text-emerald-400' : 'text-[#15803d]')">
+            {{ porcentaje }}%
+          </span>
+          <span class="text-xs font-mono tabular-nums" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">({{ ocupados }}/{{ total }})</span>
+        </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="p-3.5 flex flex-col justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wide" :class="tema === 'oscuro' ? 'text-slate-300' : 'text-slate-600'">Ingresos hoy</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-xl font-bold font-mono tabular-nums" :class="tema === 'oscuro' ? 'text-emerald-400' : 'text-[#15803d]'">{{ rotacionesHoy }}</span>
+          <span class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">ocupaciones</span>
+        </div>
+      </div>
+
+      <div class="p-3.5 flex flex-col justify-between">
+        <span class="text-[11px] font-bold uppercase tracking-wide" :class="tema === 'oscuro' ? 'text-slate-300' : 'text-slate-600'">Sensores activos</span>
+        <div class="flex items-baseline gap-1.5 mt-1">
+          <span class="text-xl font-bold font-mono tabular-nums" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">{{ conDato }}/{{ total }}</span>
+          <span class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">reportando</span>
+        </div>
+      </div>
+
+      <div class="p-3.5 flex items-center justify-between gap-2">
+        <div>
+          <span class="block text-[11px] font-bold uppercase tracking-wide" :class="tema === 'oscuro' ? 'text-slate-300' : 'text-slate-600'">Movimientos</span>
+          <span class="text-xl font-bold font-mono tabular-nums mt-1 block" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">{{ eventos.length }}</span>
+        </div>
         <button
           type="button"
-          class="text-[10px] font-bold text-slate-400 hover:text-slate-700 transition-colors cursor-pointer uppercase tracking-wide"
-          :class="cargando && 'animate-pulse text-emerald-600'"
+          :disabled="cargando"
+          class="min-h-[40px] px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer shrink-0"
+          :class="tema === 'oscuro'
+            ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-emerald-400'
+            : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-[#15803d]'"
           @click="cargar"
         >
-          {{ cargando ? "Actualizando…" : "↻ Actualizar" }}
+          {{ cargando ? "Cargando…" : "Actualizar" }}
         </button>
-        <span class="text-[11px] text-slate-500 font-semibold uppercase">Estado actual:</span>
-        <span
-          class="text-xs font-bold px-2.5 py-0.5 rounded-full"
-          :class="disponibles === 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
-        >
-          {{ disponibles === 0 ? "AFORO MÁXIMO" : `${ocupados}/${total} OCUPADAS (${porcentaje}%)` }}
-        </span>
       </div>
     </div>
 
-    <!-- 1. FLUJO HORARIO (real: ingresos/salidas por hora del día) -->
-    <div v-if="tab === 'flujo'" class="bg-slate-50/70 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-      <div class="flex items-center justify-between flex-wrap gap-2">
+    <div
+      v-if="errorCarga"
+      class="rounded-xl p-3 border flex items-center justify-between gap-3 text-xs"
+      :class="tema === 'oscuro' ? 'bg-yellow-950/30 border-yellow-700 text-yellow-200' : 'bg-yellow-50 border-yellow-300 text-yellow-950'"
+    >
+      <span>{{ errorCarga }}</span>
+      <button type="button" class="font-bold underline shrink-0 cursor-pointer" @click="cargar">Reintentar</button>
+    </div>
+
+    <!-- Fila superior analítica: Flujo horario (7 col) + Disponibilidad por estamento (5 col) -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <div
+        class="xl:col-span-7 border rounded-xl p-4 flex flex-col justify-between gap-3"
+        :class="tema === 'oscuro' ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h4 class="text-xs font-bold font-headline uppercase tracking-wider" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">
+              Flujo horario de ingresos y salidas (06:00 a 18:00)
+            </h4>
+            <p class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">
+              Evolución acumulada del día en Campus Puerta Roja
+            </p>
+          </div>
+          <div class="flex items-center gap-4 text-xs font-semibold">
+            <span class="flex items-center gap-1.5" :class="tema === 'oscuro' ? 'text-emerald-400' : 'text-[#15803d]'">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#15803d]" /> Ingresos
+            </span>
+            <span class="flex items-center gap-1.5" :class="tema === 'oscuro' ? 'text-[#facc15]' : 'text-[#8a6d00]'">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#eab308]" /> Salidas
+            </span>
+          </div>
+        </div>
+
+        <svg :viewBox="`0 0 ${FW} ${FH}`" class="w-full h-48">
+          <defs>
+            <linearGradient id="gradIngUnisucre" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stop-color="#15803d" stop-opacity="0.3" />
+              <stop offset="95%" stop-color="#15803d" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <g v-for="(tick, i) in ticksFlujo" :key="`gy${i}`">
+            <line :x1="PL" :y1="flujoY(tick)" :x2="FW - PR" :y2="flujoY(tick)" :stroke="tema === 'oscuro' ? '#1e293b' : '#e2e8f0'" stroke-dasharray="3 3" />
+            <text :x="PL - 6" :y="flujoY(tick) + 3" text-anchor="end" font-size="9" :fill="tema === 'oscuro' ? '#94a3b8' : '#64748b'">{{ tick }}</text>
+          </g>
+          <g v-for="(f, i) in flujo" :key="`x${i}`">
+            <text v-if="i % 2 === 0" :x="flujoX(i)" :y="FH - 7" text-anchor="middle" font-size="9" :fill="tema === 'oscuro' ? '#94a3b8' : '#64748b'">{{ f.hora }}</text>
+          </g>
+          <path :d="areaIngresos" fill="url(#gradIngUnisucre)" />
+          <path :d="pathIngresos" fill="none" stroke="#15803d" stroke-width="2.4" stroke-linecap="round" />
+          <path :d="pathSalidas" fill="none" stroke="#eab308" stroke-width="2" stroke-dasharray="5 3" stroke-linecap="round" />
+          <g v-for="(f, i) in flujo" :key="`d${i}`">
+            <circle :cx="flujoX(i)" :cy="flujoY(f.ingresos)" r="2.5" fill="#15803d">
+              <title>{{ f.hora }}: {{ f.ingresos }} ingresos</title>
+            </circle>
+            <circle :cx="flujoX(i)" :cy="flujoY(f.salidas)" r="2.5" fill="#eab308">
+              <title>{{ f.hora }}: {{ f.salidas }} salidas</title>
+            </circle>
+          </g>
+          <line :x1="PL" :y1="baseY" :x2="FW - PR" :y2="baseY" :stroke="tema === 'oscuro' ? '#334155' : '#cbd5e1'" />
+          <text v-if="!hayEventos && !cargando" :x="FW / 2" :y="FH / 2" text-anchor="middle" font-size="11" :fill="tema === 'oscuro' ? '#94a3b8' : '#64748b'" font-weight="600">
+            Sin movimientos hoy. Ejecuta una maniobra en «Control de portería» para poblar la serie.
+          </text>
+        </svg>
+      </div>
+
+      <div
+        class="xl:col-span-5 border rounded-xl p-4 flex flex-col justify-between gap-3"
+        :class="tema === 'oscuro' ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'"
+      >
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-            <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
-            Curva de Flujo Horario de Tráfico (Ingresos y Salidas)
+          <h4 class="text-xs font-bold font-headline uppercase tracking-wider" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">
+            Disponibilidad por estamento
           </h4>
-          <p class="text-[11px] text-slate-500">
-            Cambios de hoy registrados por los sensores y la portería ({{ eventos.length }} movimientos)
+          <p class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">
+            Estado en vivo de las 30 plazas universitarias
           </p>
         </div>
-        <div class="flex items-center gap-3 text-xs font-medium">
-          <span class="flex items-center gap-1.5 text-emerald-700"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Ingresos</span>
-          <span class="flex items-center gap-1.5 text-sky-700"><span class="w-2.5 h-2.5 rounded-full bg-sky-500" /> Salidas</span>
-        </div>
-      </div>
 
-      <svg viewBox="0 0 560 240" class="w-full h-64">
-        <defs>
-          <linearGradient id="gradIng" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stop-color="#10b981" stop-opacity="0.4" />
-            <stop offset="95%" stop-color="#10b981" stop-opacity="0" />
-          </linearGradient>
-          <linearGradient id="gradSal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stop-color="#0284c7" stop-opacity="0.4" />
-            <stop offset="95%" stop-color="#0284c7" stop-opacity="0" />
-          </linearGradient>
-        </defs>
-        <g v-for="(tick, i) in ticksFlujo" :key="`gy${i}`">
-          <line :x1="PL" :y1="flujoY(tick)" :x2="FW - PR" :y2="flujoY(tick)" stroke="#e2e8f0" stroke-dasharray="3 3" />
-          <text :x="PL - 6" :y="flujoY(tick) + 3" text-anchor="end" font-size="9" fill="#64748b">{{ tick }}</text>
-        </g>
-        <g v-for="(f, i) in flujo" :key="`x${i}`">
-          <text v-if="i % 2 === 0" :x="flujoX(i)" :y="FH - 8" text-anchor="middle" font-size="9" fill="#64748b">{{ f.hora }}</text>
-        </g>
-        <path :d="areaIngresos" fill="url(#gradIng)" />
-        <path :d="areaSalidas" fill="url(#gradSal)" />
-        <path :d="pathIngresos" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
-        <path :d="pathSalidas" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" />
-        <g v-for="(f, i) in flujo" :key="`d${i}`">
-          <circle :cx="flujoX(i)" :cy="flujoY(f.ingresos)" r="2.4" fill="#10b981">
-            <title>{{ f.hora }} · Ingresos: {{ f.ingresos }} motos</title>
-          </circle>
-          <circle :cx="flujoX(i)" :cy="flujoY(f.salidas)" r="2.4" fill="#0284c7">
-            <title>{{ f.hora }} · Salidas: {{ f.salidas }} motos</title>
-          </circle>
-        </g>
-        <line :x1="PL" :y1="baseY" :x2="FW - PR" :y2="baseY" stroke="#cbd5e1" />
-        <text v-if="!hayEventos" :x="FW / 2" :y="FH / 2" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="600">
-          Sin movimientos registrados hoy en la planilla — se registrarán con las entradas y salidas de motos
-        </text>
-      </svg>
-    </div>
-
-    <!-- 2. USO POR BAHÍA (real: ocupaciones de hoy + estado en vivo) -->
-    <div v-if="tab === 'bahias'" class="bg-slate-50/70 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-      <div class="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-            <svg class="w-4 h-4 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
-            Rotación Diaria y Estado Actual de Plazas (E01 a E10)
-          </h4>
-          <p class="text-[11px] text-slate-500">
-            Altura: veces ocupada hoy (eventos reales) · Color: estado en vivo
-          </p>
-        </div>
-        <div class="flex items-center gap-3 text-xs font-medium">
-          <span class="flex items-center gap-1.5 text-emerald-700"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Bahía Libre</span>
-          <span class="flex items-center gap-1.5 text-red-700"><span class="w-2.5 h-2.5 rounded-sm bg-red-500" /> Bahía Ocupada</span>
-          <span class="flex items-center gap-1.5 text-amber-700"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400" /> Sin Dato</span>
-        </div>
-      </div>
-
-      <svg viewBox="0 0 560 240" class="w-full h-64">
-        <g v-for="(tick, i) in [0, MAX_ROT / 2, MAX_ROT]" :key="`gyb${i}`">
-          <line :x1="PL" :y1="flujoY(tick)" :x2="FW - PR" :y2="flujoY(tick)" stroke="#e2e8f0" stroke-dasharray="3 3" />
-          <text :x="PL - 6" :y="flujoY(tick) + 3" text-anchor="end" font-size="9" fill="#64748b">{{ Math.round(tick) }}</text>
-        </g>
-        <g v-for="bar in barras" :key="bar.b.id">
-          <rect
-            :x="bar.x" :y="bar.y" :width="bar.ancho" :height="bar.alto"
-            rx="4" :fill="bar.color" class="transition-all duration-500"
-          >
-            <title>Plaza {{ bar.b.id }} · Estado: {{ bar.b.estado }} · Ocupaciones hoy: {{ bar.rot }}</title>
-          </rect>
-          <text v-if="bar.rot > 0" :x="bar.cx" :y="bar.y - 4" text-anchor="middle" font-size="9" font-weight="800" :fill="bar.color">{{ bar.rot }}</text>
-          <text :x="bar.cx" :y="FH - 8" text-anchor="middle" font-size="10" font-weight="bold" fill="#475569">{{ bar.b.id }}</text>
-        </g>
-        <text v-if="!hayEventos" :x="FW / 2" :y="FH / 2" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="600">
-          Sin ocupaciones registradas hoy
-        </text>
-      </svg>
-    </div>
-
-    <!-- 3. ZONAS: FILA NORTE (E01-E05) VS FILA SUR (E06-E10) -->
-    <div v-if="tab === 'zonas'" class="bg-slate-50/70 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-          <svg class="w-4 h-4 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-          Ocupación por zona: fila Norte (E01-E05) y fila Sur (E06-E10)
-        </h4>
-        <p class="text-[11px] text-slate-500">Comparativo de ocupación y cupos remanentes por fila del patio</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-        <div class="w-full flex items-center justify-center">
-          <div class="relative">
-            <svg viewBox="0 0 130 130" class="w-52 h-52">
-              <circle cx="65" cy="65" :r="DONA_R" fill="none" stroke="#f8fafc" stroke-width="14" />
-              <circle
-                v-for="(s, i) in segmentosZona" :key="i"
-                cx="65" cy="65" :r="DONA_R" fill="none"
-                :stroke="s.color" stroke-width="14"
-                :stroke-dasharray="s.dash" :stroke-dashoffset="s.offset"
-                class="transition-all duration-500"
-              >
-                <title>{{ s.titulo }}</title>
-              </circle>
-            </svg>
-            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span class="text-2xl font-black font-mono text-slate-900">{{ porcentaje }}%</span>
-              <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Ocupación</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-2.5">
-          <div class="p-3 rounded-xl bg-sky-50 border border-sky-200">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-sky-900 uppercase">Fila Norte</span>
-              <span class="text-xs font-mono font-bold text-sky-700">{{ norteOcup }}/{{ norte.length }} Ocupadas</span>
-            </div>
-            <div class="w-full bg-sky-200 h-2 rounded-full overflow-hidden mt-2">
-              <div
-                class="bg-sky-600 h-full rounded-full transition-all"
-                :style="{ width: `${(norteOcup / (norte.length || 1)) * 100}%` }"
-              />
-            </div>
-            <div class="flex items-center justify-between text-[10px] text-sky-800 font-medium mt-1.5">
-              <span>Plazas E01-E05</span>
-              <span>{{ norteLibre }} plazas disponibles</span>
-            </div>
-          </div>
-
-          <div class="p-3 rounded-xl bg-purple-50 border border-purple-200">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-purple-900 uppercase">Fila Sur</span>
-              <span class="text-xs font-mono font-bold text-purple-700">{{ surOcup }}/{{ sur.length }} Ocupadas</span>
-            </div>
-            <div class="w-full bg-purple-200 h-2 rounded-full overflow-hidden mt-2">
-              <div
-                class="bg-purple-600 h-full rounded-full transition-all"
-                :style="{ width: `${(surOcup / (sur.length || 1)) * 100}%` }"
-              />
-            </div>
-            <div class="flex items-center justify-between text-[10px] text-purple-800 font-medium mt-1.5">
-              <span>Plazas E06-E10</span>
-              <span>{{ surLibre }} plazas disponibles</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. RENDIMIENTO: eventos por nodo real + KPIs reales -->
-    <div v-if="tab === 'rendimiento'" class="bg-slate-50/70 border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-          <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-          Indicadores de Rendimiento y Balance por Punto de Registro
-        </h4>
-        <p class="text-[11px] text-slate-500">
-          Entradas y salidas de hoy agrupadas por punto de control (portería, salida, consola de guardia, sensores de puesto)
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col gap-2">
-          <span class="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13" /><polyline points="7 6 12 11 17 6" /></svg>
-            Cambios por origen (hoy)
-          </span>
-          <div v-if="porNodo.length" class="flex flex-col gap-2 mt-1">
-            <div v-for="(n, i) in porNodo" :key="n.nodo" class="flex items-center gap-2">
-              <span class="text-[10px] font-mono font-bold text-slate-600 w-20 truncate" :title="n.nodo">{{ n.nodo }}</span>
-              <div class="flex-1 bg-slate-100 rounded-full h-3.5 overflow-hidden">
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :style="{ width: `${(n.n / maxNodo) * 100}%`, backgroundColor: NODO_COLORES[i % NODO_COLORES.length] }"
-                />
+        <div class="flex flex-col gap-3.5 my-auto">
+          <div v-for="est in estamentos" :key="est.nombre" class="flex flex-col gap-1.5">
+            <div class="flex items-baseline justify-between gap-2">
+              <div class="min-w-0">
+                <span class="text-xs font-bold font-headline" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">{{ est.nombre }}</span>
+                <span class="ml-1.5 text-[11px] font-mono" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">{{ est.rango }}</span>
               </div>
-              <span class="text-[10px] font-mono font-bold text-slate-700 w-7 text-right">{{ n.n }}</span>
+              <span class="text-xs font-mono font-bold tabular-nums shrink-0" :class="tema === 'oscuro' ? 'text-slate-200' : 'text-slate-800'">
+                {{ est.libres }} libres ({{ est.pct }}%)
+              </span>
             </div>
-          </div>
-          <p v-else class="text-[11px] text-slate-400 mt-1">Sin eventos hoy todavía.</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Ocupación</span>
-            <span
-              class="text-xl font-extrabold font-mono my-1"
-              :style="{ color: porcentaje > 80 ? '#ef4444' : porcentaje > 50 ? '#f59e0b' : '#10b981' }"
-            >{{ porcentaje }}%</span>
-            <span class="text-[10px] text-slate-500 font-medium">{{ ocupados }} de {{ total }} plazas</span>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Rotaciones Hoy</span>
-            <span class="text-xl font-extrabold text-emerald-600 font-mono my-1">{{ rotacionesHoy }}</span>
-            <span class="text-[10px] text-slate-500 font-medium">Ocupaciones reales del día</span>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cambios de hoy</span>
-            <span class="text-xl font-extrabold text-sky-600 font-mono my-1">{{ eventos.length }}</span>
-            <span class="text-[10px] text-slate-500 font-medium">Movimientos registrados</span>
-          </div>
-          <div class="p-3 rounded-xl bg-white border border-slate-200 flex flex-col justify-between">
-            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Plazas reportando</span>
-            <span class="text-xl font-extrabold text-indigo-600 font-mono my-1">{{ conDato }}/{{ total }}</span>
-            <span class="text-[10px] text-slate-500 font-medium">Plazas con sensor activo</span>
+            <div class="w-full h-2.5 rounded-full overflow-hidden" :class="tema === 'oscuro' ? 'bg-slate-800' : 'bg-slate-100'">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                :class="barraColorPct(est.pct)"
+                :style="{ width: `${est.pct}%` }"
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="ultimaCarga" class="text-[10px] text-slate-400 font-mono text-right">
-      Actualizado a las {{ new Date(ultimaCarga).toLocaleTimeString("es-CO", { hour12: false }) }}
+    <!-- Fila inferior analítica: Rotación E01 a E30 (8 col) + Actividad por nodo (4 col) -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <div
+        class="xl:col-span-8 border rounded-xl p-4 flex flex-col justify-between gap-3"
+        :class="tema === 'oscuro' ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h4 class="text-xs font-bold font-headline uppercase tracking-wider" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">
+              Rotación diaria por plaza (E01 a E30)
+            </h4>
+            <p class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">
+              Veces ocupada hoy y estado actual de cada celda
+            </p>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-medium">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-xs bg-[#15803d]" /> Libre</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-xs bg-[#dc2626]" /> Ocupada</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-xs bg-[#64748b]" /> Sin dato</span>
+          </div>
+        </div>
+
+        <svg :viewBox="`0 0 ${FW} ${FH}`" class="w-full h-44">
+          <g v-for="(tick, i) in [0, MAX_ROT / 2, MAX_ROT]" :key="`gyb${i}`">
+            <line :x1="PL" :y1="rotY(tick)" :x2="FW - PR" :y2="rotY(tick)" :stroke="tema === 'oscuro' ? '#1e293b' : '#e2e8f0'" stroke-dasharray="3 3" />
+            <text :x="PL - 6" :y="rotY(tick) + 3" text-anchor="end" font-size="9" :fill="tema === 'oscuro' ? '#94a3b8' : '#64748b'">{{ Math.round(tick) }}</text>
+          </g>
+          <g v-for="bar in barras" :key="bar.b.id">
+            <rect
+              :x="bar.x" :y="bar.y" :width="bar.ancho" :height="bar.alto"
+              rx="2" :fill="bar.color" class="transition-all duration-300"
+            >
+              <title>Plaza {{ bar.b.id }} ({{ bar.b.estado }}): {{ bar.rot }} rotaciones hoy</title>
+            </rect>
+            <text v-if="bar.rot > 0" :x="bar.cx" :y="bar.y - 4" text-anchor="middle" font-size="8" font-weight="700" :fill="tema === 'oscuro' ? '#e2e8f0' : '#334155'">{{ bar.rot }}</text>
+            <text v-if="bar.idx % 2 === 0" :x="bar.cx" :y="FH - 7" text-anchor="middle" font-size="7.5" font-weight="700" :fill="tema === 'oscuro' ? '#94a3b8' : '#475569'">{{ bar.b.id }}</text>
+          </g>
+        </svg>
+      </div>
+
+      <div
+        class="xl:col-span-4 border rounded-xl p-4 flex flex-col justify-between gap-3"
+        :class="tema === 'oscuro' ? 'bg-slate-900/50 border-slate-800' : 'bg-white border-slate-200'"
+      >
+        <div>
+          <h4 class="text-xs font-bold font-headline uppercase tracking-wider" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-900'">
+            Eventos por nodo emisor
+          </h4>
+          <p class="text-xs" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">
+            Portería, salida, consola y sensores
+          </p>
+        </div>
+
+        <div v-if="porNodo.length" class="flex flex-col gap-2.5 my-auto">
+          <div v-for="n in porNodo" :key="n.nodo" class="flex items-center gap-2.5">
+            <span class="text-xs font-mono font-semibold w-24 truncate" :class="tema === 'oscuro' ? 'text-slate-300' : 'text-slate-700'" :title="n.nodo">{{ n.nodo }}</span>
+            <div class="flex-1 rounded-full h-2.5 overflow-hidden" :class="tema === 'oscuro' ? 'bg-slate-800' : 'bg-slate-100'">
+              <div
+                class="h-full rounded-full bg-[#15803d] transition-all duration-500"
+                :style="{ width: `${(n.n / maxNodo) * 100}%` }"
+              />
+            </div>
+            <span class="text-xs font-mono font-bold tabular-nums w-8 text-right" :class="tema === 'oscuro' ? 'text-white' : 'text-slate-800'">{{ n.n }}</span>
+          </div>
+        </div>
+        <p v-else class="text-xs my-auto" :class="tema === 'oscuro' ? 'text-slate-400' : 'text-slate-600'">
+          Sin eventos registrados hoy en el servidor.
+        </p>
+
+        <div v-if="ultimaCarga" class="text-[11px] font-mono tabular-nums pt-2 border-t" :class="tema === 'oscuro' ? 'border-slate-800 text-slate-400' : 'border-slate-100 text-slate-600'">
+          Sincronizado: {{ new Date(ultimaCarga).toLocaleTimeString("es-CO", { hour12: false }) }}
+        </div>
+      </div>
     </div>
   </div>
 </template>

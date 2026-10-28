@@ -29,5 +29,12 @@ export function useParqueadero() {
       ts: estados[b.id]?.ts ?? null,
     })));
   const disponibles = computed(() => bahias.value.filter((b) => b.estado === "LIBRE").length);
-  return { lote, conectado, bahias, disponibles, total: TOTAL_BAHIAS };
+  const ocupadas = computed(() => bahias.value.filter((b) => b.estado === "OCUPADO").length);
+  const sinDato = computed(() => bahias.value.filter((b) => b.estado === "SIN_DATO").length);
+  const ultimaActualizacion = computed<number | null>(() =>
+    bahias.value.reduce<number | null>(
+      (max, b) => (b.ts !== null && (max === null || b.ts > max) ? b.ts : max),
+      null,
+    ));
+  return { lote, conectado, bahias, disponibles, ocupadas, sinDato, ultimaActualizacion, total: TOTAL_BAHIAS };
 }

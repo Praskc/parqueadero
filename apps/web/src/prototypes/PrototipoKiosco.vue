@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * PROTOTIPO — 3 variantes del kiosco para elegir en vivo (skill `prototype`).
+ * PROTOTIPO: 3 variantes del kiosco para elegir en vivo (skill `prototype`).
  * Ruta: /prototypes/kiosco (solo dev; no se importa nada de aquí en producción).
  *
  * Reglas comunes a TODAS las variantes (correcciones de las quejas del equipo):
@@ -118,7 +118,7 @@ const irAlKiosco = () => { consolaAbierta.value = true; };
 </script>
 
 <template>
-  <!-- ============ V1 · SERENO — kiosco blanco, un solo acento verde ============ -->
+  <!-- ============ V1: SERENO, kiosco blanco, un solo acento verde ============ -->
   <div v-if="v === 0" :key="`v0-${remount}`" class="anim-entrada min-h-screen bg-slate-100 p-3 sm:p-5 flex flex-col gap-4">
     <div class="max-w-6xl w-full mx-auto flex flex-col gap-4">
       <header class="bg-white border border-slate-200 rounded-2xl px-5 sm:px-7 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -192,7 +192,7 @@ const irAlKiosco = () => { consolaAbierta.value = true; };
     </div>
   </div>
 
-  <!-- ============ V2 · SEÑALÉTICA — placas del campus; asfalto solo en aforo y panel ============ -->
+  <!-- ============ V2: SEÑALÉTICA, placas del campus; asfalto solo en aforo y panel ============ -->
   <div v-else-if="v === 1" :key="`v1-${remount}`" class="anim-entrada min-h-screen bg-slate-200/70 p-3 sm:p-5 flex flex-col gap-4">
     <div class="max-w-6xl w-full mx-auto flex flex-col gap-4">
       <header class="bg-white border-2 border-slate-300 rounded-2xl px-5 sm:px-7 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -270,7 +270,7 @@ const irAlKiosco = () => { consolaAbierta.value = true; };
     </div>
   </div>
 
-  <!-- ============ V3 · PANTALLA COMPLETA — el plano es todo, placas de vidrio flotantes ============ -->
+  <!-- ============ V3: PANTALLA COMPLETA, el plano es todo, placas de vidrio flotantes ============ -->
   <div v-else :key="`v2-${remount}`" class="anim-entrada relative min-h-screen bg-slate-100 flex items-center justify-center overflow-hidden">
     <ParkingMap :bahias="bahias" :animaciones="animaciones" :talanquera="talanquera" :bloqueada="bloqueada" />
 
@@ -304,7 +304,7 @@ const irAlKiosco = () => { consolaAbierta.value = true; };
       class="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-[92vw] bg-white/90 backdrop-blur-md rounded-full border border-white/60 shadow-lg px-5 py-2.5 flex items-center gap-3">
       <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="COLOR_CLARO[estado].replace('text-', 'bg-')" />
       <div class="text-sm font-semibold text-slate-800 truncate">
-        <span class="font-extrabold" :class="COLOR_CLARO[estado]">{{ TITULO[estado] }} — </span>
+        <span class="font-extrabold" :class="COLOR_CLARO[estado]">{{ TITULO[estado] }}: </span>
         <template v-if="estado === 'movimiento' && animacionActiva?.tipo === 'ingreso'">
           Diríjase a la bahía <span class="font-black text-slate-900">{{ animacionActiva?.espacioId }}</span>
         </template>

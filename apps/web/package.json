@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/chakra-petch": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/opendyslexic": "^5.3.0",
     "@parq/shared": "*",
     "@tailwindcss/vite": "^4.3.3",
     "tailwindcss": "^4.3.3",

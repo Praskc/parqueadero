@@ -15,7 +15,7 @@ export const IDS_ESPACIOS = (n: number) =>
 export const config = {
   lote: process.env.LOTE ?? "lote1",
   nodoAdmin: "admin",
-  espacios: (process.env.ESPACIOS ?? IDS_ESPACIOS(10).join(",")).split(","),
+  espacios: (process.env.ESPACIOS ?? IDS_ESPACIOS(30).join(",")).split(","),
   token: tokenAdmin(),
   /** Interfaz de escucha. Por defecto solo localhost; usa HOST=0.0.0.0 cuando el kiosco se sirva desde otro equipo. */
   host: process.env.HOST ?? "127.0.0.1",
