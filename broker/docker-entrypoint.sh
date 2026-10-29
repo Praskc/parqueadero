@@ -1,19 +1,5 @@
 #!/usr/bin/env bash
 # Genera la configuración del broker dentro del contenedor.
-#
-# El repo trae broker/mosquitto.conf para la instalación nativa (Windows, rutas
-# relativas y plugins .dll). En el contenedor las rutas cambian y la versión de
-# Mosquitto puede traer plugins o no, así que aquí se arma la configuración
-# equivalente detectando qué hay disponible.
-#
-# El contenedor corre como usuario sin privilegios (1883) y con el sistema de
-# archivos de solo lectura: todo lo que se escribe vive en un tmpfs y el
-# material de la PKI se copia desde el repo montado en :ro.
-#
-# Fuentes de verdad (repo montado en /repo):
-#   /repo/broker/passwd  usuarios con clave
-#   /repo/broker/acl     ACL por identidad
-#   /repo/broker/certs   CA y certificados (solo si se abre el listener 8883)
 set -euo pipefail
 
 REPO="${REPO:-/repo}"
@@ -35,10 +21,7 @@ if [ -n "$PLUGIN_DIR" ]; then
   [ -f "$PLUGIN_DIR/mosquitto_acl_file.so" ] && ACL_PLUGIN="$PLUGIN_DIR/mosquitto_acl_file.so"
 fi
 
-# ------------------------------------------- generar passwd y ACL dentro del contenedor
-# No se copian desde el volumen montado (en Docker Desktop sobre Windows los
-# permisos de archivos montados no se traducen entre root (mqtt-init) y el
-# usuario 1883 del broker). Se generan aquí usando las variables de entorno.
+# Generar passwd y ACL dentro del contenedor.
 if [ -n "${MQTT_USER:-}" ] && [ -n "${MQTT_PASS:-}" ]; then
   mosquitto_passwd -c -b "$CONF_DIR/passwd" "${MQTT_USER}" "${MQTT_PASS}"
 else
@@ -54,8 +37,7 @@ topic write parq/+/+/comandos/#
 EOF
 chmod 640 "$CONF_DIR/acl"
 
-# --------------------------------------------------- listener de nodos (8883)
-# CERRADO por defecto: se abre cuando llegue la placa ESP32.
+# Listener de nodos (8883, cerrado por defecto).
 NODES_LISTENER="${NODES_LISTENER:-0}"
 if [ "$NODES_LISTENER" = "1" ]; then
   cp "$REPO/broker/certs/ca.crt" "$REPO/broker/certs/server.crt" "$REPO/broker/certs/server.key" "$CONF_DIR/certs/"
@@ -63,7 +45,7 @@ if [ "$NODES_LISTENER" = "1" ]; then
   chmod 644 "$CONF_DIR/certs/ca.crt" "$CONF_DIR/certs/server.crt"
 fi
 
-# ------------------------------------------------------------- configuración
+# Configuración del broker.
 {
   echo "# Generado por broker/docker-entrypoint.sh (no editar a mano)."
   echo "# Equivalente en contenedor de broker/mosquitto.conf."

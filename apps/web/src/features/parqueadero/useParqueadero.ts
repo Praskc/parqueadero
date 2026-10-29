@@ -5,10 +5,7 @@ import { BAHIA_LAYOUT, TOTAL_BAHIAS } from "../../config/bahias";
 import type { Bahia } from "../../types/hmi";
 import type { EstadoVista } from "@parq/shared";
 
-/**
- * Estado REAL del parqueadero (singleton, alimentado por WebSocket ← backend ← MQTT).
- * La UI nunca muta este estado: solo cambia cuando el mensaje vuelve del broker.
- */
+// Estado del parqueadero alimentado por WebSocket. La UI nunca lo muta.
 const estados = reactive<Record<string, { estado: EstadoVista; ts: number | null }>>({});
 const lote = ref("-");
 

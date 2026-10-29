@@ -95,8 +95,7 @@ const cupoColor = computed(() => claseTextoTono(tonoGlobal.value));
 const porcentajeColor = computed(() => claseTextoTono(tonoGlobal.value));
 const porcentajeBarColor = computed(() => claseBarraTono(tonoGlobal.value));
 
-// Sin lectura no se inventan ceros: la cinta muestra un guion y el estado de
-// los sensores se declara aparte, para que el número grande siga siendo cupos.
+// Sin lectura no se inventan ceros.
 const sinLectura = computed(() => !props.conectado || sinSenalGlobal.value);
 
 const valorCupos = computed(() => {
@@ -135,7 +134,7 @@ const claseValorCamino = computed(() => {
       : "text-neutral-400";
 });
 
-// Edad del dato de sensores siempre visible y con cambio de color por antigüedad
+// Edad del dato de sensores con cambio de color por antigüedad.
 const estadoFrescuraSensores = computed<{ texto: string; tono: TonoEstado }>(() => {
   if (!props.conectado) {
     return { texto: "Sensores: sin conexión", tono: "critico" };
@@ -170,8 +169,7 @@ const detalleFrescura = computed(() =>
   estadoFrescuraSensores.value.texto.replace(/^Sensores:\s*/, ""),
 );
 
-// Versión corta para el segmento de estado: la frase completa queda en el
-// título y en la etiqueta accesible, sin romper la cinta en varias líneas.
+// Versión corta para el segmento de estado.
 const resumenSensores = computed(() => {
   if (!props.conectado) return "Sin conexión";
   if (props.ultimaActualizacion === null) return "Sin lectura";

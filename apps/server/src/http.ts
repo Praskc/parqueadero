@@ -60,17 +60,11 @@ export async function buildApp(deps: HttpDeps) {
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Content-Security-Policy",
-      // font-src necesita data: porque @fontsource incrusta las tipografias
-      // como data: URI dentro del CSS. connect-src 'self' cubre el WebSocket
-      // del mismo origen (Chrome/Edge tratan ws/wss como el mismo origen).
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'");
-    // Aislamiento del documento: la HMI no carga nada de terceros, así que
-    // puede declarar ambas políticas sin romper ninguna tipografía ni imagen.
     reply.header("Cross-Origin-Opener-Policy", "same-origin");
     reply.header("Cross-Origin-Embedder-Policy", "require-corp");
     reply.header("Cross-Origin-Resource-Policy", "same-origin");
     reply.header("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
-    // HSTS solo cuando el tráfico ya es HTTPS: en HTTP el navegador lo ignora.
     if (req.protocol === "https")
       reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   });

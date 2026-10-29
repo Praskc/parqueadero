@@ -1,9 +1,4 @@
 # syntax=docker/dockerfile:1
-# Imagen de la aplicación: backend Fastify + build estático de la HMI.
-# La web compilada la sirve el propio backend (apps/server/src/http.ts), así que
-# un solo contenedor expone toda la aplicación en el puerto 8000.
-
-# ---------------------------------------------------------------- base
 FROM node:24.22.2-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH
@@ -12,11 +7,8 @@ RUN npm install -g pnpm@11.1.2 \
     && pnpm --version
 WORKDIR /app
 
-# ------------------------------------------------------------- dependencias
+# dependencias
 FROM base AS deps
-# better-sqlite3 trae binarios precompilados, pero si no hay para esta
-# arquitectura compila: por eso están las herramientas de build.
-ENV PNPM_CONFIG_IGNORE_SCRIPTS=false
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -27,13 +19,13 @@ COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm rebuild better-sqlite3 || true
 
-# ------------------------------------------------------------ build de la web
+# build de la web
 FROM deps AS build
 COPY apps/web apps/web
 COPY packages/shared packages/shared
 RUN pnpm --filter @parq/web build
 
-# ------------------------------------------------- dependencias de producción
+# dependencias de producción
 FROM base AS prod-deps
 ENV PNPM_CONFIG_IGNORE_SCRIPTS=false
 RUN apt-get update \
@@ -46,7 +38,7 @@ COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile --ignore-scripts --prod
 RUN pnpm rebuild better-sqlite3 || true
 
-# ------------------------------------------------------------------ runtime
+# runtime
 FROM base AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
