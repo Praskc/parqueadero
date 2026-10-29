@@ -1,6 +1,28 @@
-# Parqueadero Unisucre
+<h1 align="center">Parqueadero Unisucre</h1>
 
-HMI de parqueadero en tiempo real para el Campus Puerta Roja. Cada plaza reporta su estado por MQTT, el backend lo valida y lo guarda en SQLite, y la pantalla del kiosco y la consola del operador se actualizan solas por WebSocket. La talanquera de entrada y salida se anima con el mismo evento que llega del broker.
+<p align="center">
+  <b>HMI de parqueadero en tiempo real</b> · 30 plazas · MQTT + WebSocket<br>
+  <i>ESP32 → Mosquitto → Fastify → Vue 3</i>
+</p>
+
+<p align="center">
+  <img alt="rama main" src="https://img.shields.io/badge/rama-main-15803d?style=flat-square">
+  <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="Vue 3.5" src="https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square&logo=vuedotjs&logoColor=white">
+  <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white">
+  <img alt="Fastify 5" src="https://img.shields.io/badge/Fastify-5-000000?style=flat-square&logo=fastify&logoColor=white">
+  <img alt="Mosquitto 2.1" src="https://img.shields.io/badge/Mosquitto-2.1-3C5280?style=flat-square&logo=eclipsemosquitto&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite&logoColor=white">
+  <img alt="Node 24" src="https://img.shields.io/badge/Node-24-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white">
+  <img alt="pnpm 11" src="https://img.shields.io/badge/pnpm-11-F69220?style=flat-square&logo=pnpm&logoColor=white">
+  <img alt="Licencia MIT" src="https://img.shields.io/badge/Licencia-MIT-16A34A?style=flat-square">
+</p>
+
+*Estás viendo la rama `main`: la versión estable, única rama del proyecto y la que corre en el kiosco.*
+
+| Rama | Propósito |
+|---|---|
+| [`main`](https://github.com/Praskc/parqueadero/tree/main) | Estable. Los cambios se integran aquí y se prueban contra el broker real |
 
 ![Tablero del parqueadero en modo claro](docs/capturas/tablero.png)
 
@@ -181,3 +203,7 @@ Así, una clave robada no basta para hacerse pasar por un sensor: hace falta su 
 ## Documentación
 
 [`contexto-mqtt-parqueadero.md`](contexto-mqtt-parqueadero.md) reúne el diseño completo: contrato MQTT, broker y PKI, API, HMI, firmware y el historial de decisiones del equipo.
+
+## Licencia
+
+[MIT](LICENSE) — ver el archivo `LICENSE` en la raíz del repositorio.
