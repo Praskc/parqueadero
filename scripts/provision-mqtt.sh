@@ -57,7 +57,7 @@ need mosquitto_passwd
 # ------------------------------------------------------------------- entorno
 leer_env() { # archivo clave -> valor (vacío si no está)
   [ -f "$1" ] || return 0
-  sed -n "s/^$2=//p" "$1" | tail -n 1
+  sed -n "s/^$2=//p" "$1" | tail -n 1 | tr -d '\r'
 }
 
 escribir_env() { # archivo clave valor
@@ -272,7 +272,11 @@ info "Escrito broker/acl"
 
 # ------------------------------------------------------------------- passwd
 paso "Usuarios del broker"
-mosquitto_passwd -c -b "$PASSWD" "$USUARIO_BACKEND" "$PASS_ACTUAL" >/dev/null 2>&1
+[ -f "$PASSWD" ] && rm -f "$PASSWD"
+mosquitto_passwd -c -b "$PASSWD" "$USUARIO_BACKEND" "$PASS_ACTUAL" || {
+  echo "ERROR: mosquitto_passwd falló creando usuario '$USUARIO_BACKEND'" >&2
+  exit 1
+}
 chmod 600 "$PASSWD"
 info "broker/passwd: usuario '$USUARIO_BACKEND'"
 
@@ -288,6 +292,11 @@ escribir_env "$ENV_SERVER" MQTT_PASS "$PASS_ACTUAL"
 escribir_env "$ENV_SERVER" ADMIN_TOKEN "$TOKEN_ACTUAL"
 
 rm -rf "$TMP_DIR"
+
+# Permisos de lectura para que el broker (usuario 1883) pueda leer
+# passwd y ACL montados desde el volumen del host.
+chmod 644 "$PASSWD" "$ACL" 2>/dev/null || true
+chmod 644 "$CERTS/ca.crt" 2>/dev/null || true
 
 paso "Listo"
 info "CA        : broker/certs/ca.crt"

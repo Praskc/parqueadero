@@ -18,7 +18,7 @@ set -euo pipefail
 
 REPO="${REPO:-/repo}"
 CONF_DIR=/mosquitto/config
-CONF="$CONF_DIR/mosquitto.conf"
+CONF=/mosquitto/mosquitto.conf
 DATA_DIR=/mosquitto/data
 
 mkdir -p "$CONF_DIR" "$DATA_DIR" "$CONF_DIR/certs"
@@ -35,10 +35,24 @@ if [ -n "$PLUGIN_DIR" ]; then
   [ -f "$PLUGIN_DIR/mosquitto_acl_file.so" ] && ACL_PLUGIN="$PLUGIN_DIR/mosquitto_acl_file.so"
 fi
 
-# ------------------------------------------- copiar material a rutas del user
-cp "$REPO/broker/passwd" "$CONF_DIR/passwd"
-cp "$REPO/broker/acl" "$CONF_DIR/acl"
-chmod 640 "$CONF_DIR/passwd" "$CONF_DIR/acl"
+# ------------------------------------------- generar passwd y ACL dentro del contenedor
+# No se copian desde el volumen montado (en Docker Desktop sobre Windows los
+# permisos de archivos montados no se traducen entre root (mqtt-init) y el
+# usuario 1883 del broker). Se generan aquí usando las variables de entorno.
+if [ -n "${MQTT_USER:-}" ] && [ -n "${MQTT_PASS:-}" ]; then
+  mosquitto_passwd -c -b "$CONF_DIR/passwd" "${MQTT_USER}" "${MQTT_PASS}"
+else
+  mosquitto_passwd -c -b "$CONF_DIR/passwd" "backend" "${MQTT_PASS:-changeme}"
+fi
+chmod 640 "$CONF_DIR/passwd"
+
+cat > "$CONF_DIR/acl" <<EOF
+user ${MQTT_USER:-backend}
+topic read parq/#
+topic write parq/+/disponibles
+topic write parq/+/+/comandos/#
+EOF
+chmod 640 "$CONF_DIR/acl"
 
 # --------------------------------------------------- listener de nodos (8883)
 # CERRADO por defecto: se abre cuando llegue la placa ESP32.

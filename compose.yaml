@@ -29,6 +29,8 @@ services:
     command: ["bash", "/repo/scripts/provision-mqtt.sh"]
     environment:
       MQTT_USER: backend
+      MQTT_PASS: parqueadero-broker-2026
+      ADMIN_TOKEN: 0b5667d9264f89058faa8c1d7f925d50
     volumes:
       - .:/repo
     user: "${DOCKER_UID:-0}:${DOCKER_GID:-0}"
@@ -47,6 +49,8 @@ services:
       mqtt-init:
         condition: service_completed_successfully
     environment:
+      MQTT_USER: backend
+      MQTT_PASS: parqueadero-broker-2026
       # 1 = abre el listener 8883 con mTLS para los nodos ESP32.
       # Se deja en 0 hasta que llegue la placa.
       NODES_LISTENER: "${NODES_LISTENER:-0}"
@@ -62,7 +66,7 @@ services:
     user: "1883:1883"
     read_only: true
     tmpfs:
-      - /mosquitto/config:uid=1883,gid=1883,mode=0750
+      - /mosquitto:uid=1883,gid=1883,mode=0755
       - /tmp:uid=1883,gid=1883,mode=1777
     cap_drop:
       - ALL
@@ -75,9 +79,8 @@ services:
       test:
         - CMD-SHELL
         - >-
-          tr -d '\r' < /repo/.env > /tmp/parq.env; . /tmp/parq.env;
           mosquitto_pub -h 127.0.0.1 -p 1883
-          -u "$$MQTT_USER" -P "$$MQTT_PASS"
+          -u "${MQTT_USER}" -P "${MQTT_PASS}"
           -t 'parq/lote1/backend/comandos/healthcheck' -m ok
       interval: 10s
       timeout: 5s
@@ -92,6 +95,8 @@ services:
       context: .
       dockerfile: Dockerfile
     image: parqueadero-app:local
+    env_file:
+      - .env
     depends_on:
       broker:
         condition: service_healthy
