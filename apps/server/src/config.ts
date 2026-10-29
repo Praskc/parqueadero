@@ -8,15 +8,17 @@ function tokenAdmin(): string {
   return t;
 }
 
-/** E01..E10 por defecto; la cantidad vive en un solo lugar. */
+/** E01..E30 por defecto (30 plazas: 10 estudiantes, 10 docentes, 10 administrativos). */
 export const IDS_ESPACIOS = (n: number) =>
   Array.from({ length: n }, (_, i) => `E${String(i + 1).padStart(2, "0")}`);
 
 export const config = {
   lote: process.env.LOTE ?? "lote1",
   nodoAdmin: "admin",
-  espacios: (process.env.ESPACIOS ?? IDS_ESPACIOS(10).join(",")).split(","),
+  espacios: (process.env.ESPACIOS ?? IDS_ESPACIOS(30).join(",")).split(","),
   token: tokenAdmin(),
+  /** Identidades que el backend puede usar al publicar estados (deben coincidir con broker/nodos.json). */
+  nodosAdmin: ["admin", "porteria", "salida", "operador"] as string[],
   /** Interfaz de escucha. Por defecto solo localhost; usa HOST=0.0.0.0 cuando el kiosco se sirva desde otro equipo. */
   host: process.env.HOST ?? "127.0.0.1",
   mqttUrl: process.env.MQTT_URL ?? "mqtt://127.0.0.1:1883",

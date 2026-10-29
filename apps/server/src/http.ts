@@ -92,9 +92,12 @@ export async function buildApp(deps: HttpDeps) {
       if (!tokenValido(req.headers["x-admin-token"]))
         return reply.code(401).send({ error: "no autorizado" });
       const estado = EstadoSchema.safeParse(req.body?.estado);
-      const nodo = typeof req.body?.nodo === "string" && /^[\w-]{1,32}$/.test(req.body.nodo)
-        ? req.body.nodo
+      const nodoRaw = req.body?.nodo;
+      const nodo = typeof nodoRaw === "string" && /^[\w-]{1,32}$/.test(nodoRaw)
+        ? nodoRaw
         : undefined;
+      if (nodoRaw !== undefined && (!nodo || !config.nodosAdmin.includes(nodo)))
+        return reply.code(400).send({ error: "nodo inválido" });
       if (!config.espacios.includes(req.params.id) || !estado.success)
         return reply.code(400).send({ error: "id o estado inválido" });
       deps.publicarEstado(req.params.id, estado.data, nodo);

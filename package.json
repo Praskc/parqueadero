@@ -7,6 +7,8 @@
     "dev": "pnpm -r --parallel dev",
     "broker": "pwsh -NoProfile -File scripts/broker.ps1",
     "mqtt:log": "pwsh -NoProfile -File scripts/mqtt-log.ps1",
+    "mqtt:provision": "pwsh -NoProfile -File scripts/provision-mqtt.ps1",
+    "mqtt:nodo": "pwsh -NoProfile -File scripts/mqtt-nodo.ps1",
     "check": "pnpm -r check"
   }
 }

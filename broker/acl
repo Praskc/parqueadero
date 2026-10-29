@@ -1,0 +1,21 @@
+# GENERADO por scripts/provision-mqtt.ps1 desde broker/nodos.json.
+# No editar a mano: el proximo "pnpm mqtt:provision" lo sobrescribe.
+#
+# backend  -> listener 1883 (loopback, usuario/clave). Lee todo y solo escribe
+#             el plano de control; no puede hacerse pasar por un sensor.
+# nodos    -> listener 8883 (mTLS). El CN del certificado es el usuario y solo
+#             puede escribir las bahías que tiene asignadas en nodos.json.
+
+user backend
+topic read parq/#
+topic write parq/+/disponibles
+topic write parq/+/admin/espacios/+/estado
+topic write parq/+/porteria/espacios/+/estado
+topic write parq/+/salida/espacios/+/estado
+topic write parq/+/operador/espacios/+/estado
+topic write parq/+/+/comandos/#
+
+user nodo-e01
+topic write parq/lote1/nodo-e01/espacios/E01/estado
+topic read parq/lote1/nodo-e01/comandos/#
+
