@@ -70,6 +70,25 @@ ESP32 (nodo) --MQTT/TLS--> Mosquitto --MQTT--> Fastify (SQLite) --WS--> Vue 3
 
 La simulación de tráfico del panel es un interruptor manual del operador: no arranca sola y publica por el mismo camino REST → MQTT → WebSocket que un sensor real.
 
+## Transporte y costo
+
+Cada camino usa el transporte que le corresponde. No hay solapamiento:
+
+| Camino | Transporte | Frecuencia | Costo |
+|---|---|---|---|
+| Sensor → backend | MQTT (1883 backend, 8883 mTLS para nodos) | Por cambio de plaza | ~30 B extra por publicación (TLS) |
+| Backend → navegador | WebSocket `/ws` | Push: snapshot al conectar + delta por cambio | 0 B si no hay cambios |
+| Navegador → backend | HTTP REST | Solo por acción del operador | 1 petición por acción |
+| Analítica e historial | HTTP REST | Al abrir la sección | 1 petición por consulta |
+
+Por qué el estado **no** se consulta por HTTP en bucle:
+
+- Un `GET /api/estado` devuelve **1694 B**. Con las cabeceras de petición y respuesta, un polling a 1 Hz serían unas 2,2 KB por segundo: 86 400 peticiones y **~190 MB al día por navegador**.
+- Por WebSocket el costo es un handshake único y después **103 B por cada cambio real**. En un turno normal el tráfico del navegador es de kilobytes, no de megabytes.
+- En el código **no hay polling**: el único temporizador de red de la web es el reconector del WebSocket, y la analítica se carga una vez al abrir la pestaña y se mantiene viva por WS.
+
+HTTP se conserva para comandos y consultas porque el código de estado, las cabeceras (`x-admin-token`) y el registro de auditoría son gratis ahí, mientras que meterlos en WebSocket obligaría a inventar un sobre de mensajes para simular un 401. Las peticiones HTTP usan `keep-alive`, así que tampoco hay un TCP nuevo por llamada.
+
 ## Estructura del proyecto
 
 ```text
