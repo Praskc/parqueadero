@@ -5,8 +5,9 @@ FROM eclipse-mosquitto:2
 
 USER root
 RUN apk add --no-cache bash jq openssl \
-    && (command -v mosquitto_passwd >/dev/null 2>&1 || apk add --no-cache mosquitto-clients) \
-    && (command -v mosquitto_sub >/dev/null 2>&1 || apk add --no-cache mosquitto-clients)
+    && (command -v mosquitto_passwd >/dev/null 2>&1 || apk add --no-cache mosquitto) \
+    && (command -v mosquitto_sub >/dev/null 2>&1 || apk add --no-cache mosquitto-clients) \
+    && mosquitto -h 2>&1 | head -n 1
 
 COPY broker/docker-entrypoint.sh /usr/local/bin/parq-broker.sh
 RUN chmod +x /usr/local/bin/parq-broker.sh

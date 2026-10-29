@@ -37,7 +37,7 @@ cp "$REPO/broker/passwd" "$CONF_DIR/passwd"
 cp "$REPO/broker/acl" "$CONF_DIR/acl"
 chmod 640 "$CONF_DIR/passwd" "$CONF_DIR/acl"
 if id mosquitto >/dev/null 2>&1; then
-  chown mosquitto:mosquitto "$CONF_DIR/passwd" "$CONF_DIR/acl" "$DATA_DIR" "$LOG_DIR"
+  chown mosquitto:mosquitto "$CONF_DIR/passwd" "$CONF_DIR/acl" "$DATA_DIR" "$LOG_DIR" 2>/dev/null || true
 fi
 
 # --------------------------------------------------- listener de nodos (8883)

@@ -10,8 +10,10 @@ set -e
 cd /app/apps/server
 
 if [ -f /repo/.env ]; then
+  # El .env puede venir de Windows con CRLF: se normaliza antes de sourced.
+  tr -d '\r' < /repo/.env > /tmp/parq.env
   set -a
-  . /repo/.env
+  . /tmp/parq.env
   set +a
 fi
 
