@@ -53,7 +53,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          set -a; . /repo/.env; set +a;
+          tr -d '\r' < /repo/.env > /tmp/parq.env; . /tmp/parq.env;
           mosquitto_pub -h 127.0.0.1 -p 1883
           -u "$$MQTT_USER" -P "$$MQTT_PASS"
           -t 'parq/lote1/backend/comandos/healthcheck' -m ok
