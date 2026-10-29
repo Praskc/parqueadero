@@ -2,7 +2,7 @@
 
 ## 1. Alcance actual
 
-Prototipo base ("carpintería básica"): Mosquitto + base de datos + frontend. Sin nodos de control, sin talanquera, sin ACL ni TLS por ahora. Un **admin** simula el sensor: marca un puesto como OCUPADO o LIBRE y el sistema lo registra y lo muestra.
+Prototipo base ("carpintería básica"): Mosquitto + base de datos + frontend. El broker ya tiene mTLS y ACL por nodo; el listener de nodos (8883) queda cerrado hasta que llegue la placa. Un **admin** simula el sensor: marca un puesto como OCUPADO o LIBRE y el sistema lo registra y lo muestra.
 
 Requisitos que se mantienen:
 
@@ -21,7 +21,7 @@ Admin (click) ─► Backend ─publish retained─► Mosquitto ─► Backend 
 
 - El admin **solo publica a MQTT**. La DB y el frontend se actualizan al recibir el mensaje de vuelta del broker, así que el lazo completo queda probado.
 - Cuando exista el sensor real, publica al mismo topic y nada aguas abajo cambia.
-- El ESP32 habla MQTT sobre TCP 1883. El navegador habla REST + WebSocket con el backend.
+- El ESP32 hablará MQTT sobre TLS en el 8883 cuando se abra el listener; el backend habla MQTT por el 1883 en loopback. El navegador habla REST + WebSocket con el backend.
 
 ## 3. Decisiones tomadas y razones
 
@@ -41,7 +41,9 @@ Admin (click) ─► Backend ─publish retained─► Mosquitto ─► Backend 
 | `parq/<lote>/<nodo>/espacios/<id>/estado` | nodo/admin → backend | 1 | sí | `{"v":1,"estado":"LIBRE\|OCUPADO","ts":...}` |
 | `parq/<lote>/disponibles` | backend → todos | 1 | sí | `{"v":1,"n":4}` |
 
-- El admin usa `nodo = admin`.
+- El admin usa `nodo = admin`; el backend solo puede publicar las identidades `admin`, `porteria`, `salida` y `operador`.
+- Los nodos sensores publican con su certificado y solo las bahías de `broker/nodos.json`.
+- Topic reservado para comandos: `parq/<lote>/<nodo>/comandos/<dispositivo>` (backend escribe, cada nodo lee el suyo). El payload se define con la talanquera.
 - Un puesto sin reporte se muestra como `SIN_DATO`, no como `LIBRE`.
 - El campo `v` versiona el payload para actualizar firmware gradualmente.
 
@@ -54,10 +56,15 @@ parqueadero/
   pnpm-workspace.yaml        # workspaces + onlyBuiltDependencies (better-sqlite3)
   package.json               # scripts raíz: dev, broker, check
   scripts/broker.ps1         # lanza mosquitto con la conf del proyecto
+  scripts/provision-mqtt.ps1 # CA, certificados de nodos y ACL desde nodos.json
+  scripts/mqtt-nodo.ps1      # publica como un nodo con su certificado (banco)
   broker/
     mosquitto.conf           # §6
     passwd                   # (gitignored) usuario `backend`
     data/                    # (gitignored) persistencia del broker
+    nodos.json               # mapa nodo sensor -> bahías (fuente de la ACL)
+    acl                      # (generado) permisos por usuario/topic
+    certs/                   # (gitignored) CA, servidor y certificados de nodos
   packages/shared/           # @parq/shared: contratos Zod + helpers de topics (MQTT y WS)
   apps/server/               # @parq/server: Fastify + mqtt.js + better-sqlite3 (TS)
     src/index.ts             # entrypoint: cablea MQTT → DB → WS
@@ -67,7 +74,7 @@ parqueadero/
     index.html, vite.config.ts, src/main.ts   # entrypoints Vite estándar
     src/App.vue, src/style.css
     src/types/hmi.ts         # modelos de vista del HMI
-    src/config/bahias.ts     # layout físico E01–E10
+    src/config/bahias.ts     # layout físico E01-E30 (3 zonas)
     src/services/            # realtime (bus WS), api, adminToken
     src/lib/                 # sonido (WebAudio), tiempo
     src/features/
@@ -79,30 +86,79 @@ parqueadero/
 
 Instalación: `pnpm i`. Requiere Node 24 (ejecuta TS directo por type stripping, sin build). Gestor de paquetes: pnpm exclusivamente.
 
-## 6. mosquitto.conf
+## 6. Broker: mosquitto.conf, ACL y PKI
 
-El broker corre **desde el proyecto** (`pnpm broker`), no como servicio de Windows. Conf en `broker/mosquitto.conf`, atada a localhost, con auth y persistencia:
+El broker corre **desde el proyecto** (`pnpm broker`), no como servicio de Windows. La configuración vive en `broker/mosquitto.conf` y separa dos superficies:
 
-```
-listener 1883 127.0.0.1
-allow_anonymous false
-password_file broker/passwd
-persistence true
-persistence_location broker/data/
-```
+| Listener | Para quién | Autenticación | Estado |
+|---|---|---|---|
+| `1883` en `127.0.0.1` | backend | usuario/clave (`backend`) + ACL | activo |
+| `8883` en `0.0.0.0` | nodos sensores | mTLS: certificado de cliente + ACL | comentado hasta conectar la placa |
 
-- Claves con `mosquitto_passwd -c -b broker/passwd backend <clave>` (la clave vive en `apps/server/.env`).
+Mosquitto 2.1 deprecó `password_file`, `acl_file` y `per_listener_settings` (se retiran en 3.0). Se usan los plugins `mosquitto_password_file.dll` y `mosquitto_acl_file.dll`, cargados con `plugin_load` y aplicados por listener con `plugin_use`. El password solo se aplica al 1883; los nodos se autentican con certificado.
+
+### 6.1 Reglas de seguridad
+
+- `1883` escucha solo en loopback: ni la LAN ni el WiFi del campus lo ven.
+- `8883` exige `require_certificate true`: sin un certificado firmado por la CA local no hay handshake.
+- `use_identity_as_username true` toma el CN del certificado como usuario MQTT. La ACL se escribe por `user <CN>` y el nodo no manda contraseña.
+- `tls_version tlsv1.2`: es lo que soportan los ESP32 con mbedTLS 2.x. Los certificados son EC P-256 (más livianos que RSA).
+- `max_packet_size 1024` y `max_connections 64`.
+
+### 6.2 ACL (`broker/acl`)
+
+La ACL se genera desde `broker/nodos.json`; no se edita a mano. Matriz:
+
+- `backend`: lee `parq/#`; escribe `parq/+/disponibles`, `parq/+/<identidad>/espacios/+/estado` para `admin`, `porteria`, `salida` y `operador`, y `parq/+/+/comandos/#`.
+- `nodo-e01`: escribe solo `parq/lote1/nodo-e01/espacios/E01/estado`; lee solo `parq/lote1/nodo-e01/comandos/#`.
+
+Consecuencias: un nodo no puede falsear otra bahía, otro nodo ni `disponibles`; el backend no puede hacerse pasar por un sensor. El backend conserva las identidades del operador (`admin`/`porteria`/`salida`/`operador`) y el servidor las valida antes de publicar.
+
+### 6.3 PKI y certificados
+
+`pnpm mqtt:provision` genera, de forma idempotente:
+
+| Archivo | Contenido | Vigencia |
+|---|---|---|
+| `broker/certs/ca.crt` + `ca.key` | CA local | 10 años |
+| `broker/certs/server.crt` + `server.key` | certificado del broker; SAN `localhost`, `127.0.0.1`, hostname e IP de LAN | 825 días |
+| `broker/certs/nodos/<nodo>.crt` + `.key` + `.pem` | certificado de cliente, CN = nombre del nodo | 825 días |
+| `broker/acl` | ACL generada desde `nodos.json` | — |
+
+- `broker/certs/` está gitignored; las claves privadas quedan con permisos restringidos al usuario en Windows.
+- El `.pem` del nodo combina certificado + clave para flashear; el ESP32 también necesita `ca.crt`.
+- Para agregar un nodo: editar `broker/nodos.json` (nombre y bahías), correr `pnpm mqtt:provision` y flashear `ca.crt` + `<nodo>.pem`.
+- `pnpm mqtt:provision -Force` rota hojas conservando la CA; `-NewCa` rota la CA y obliga a reflashear todo.
+- La CA y `ca.key` son el secreto más crítico: no salen del equipo del broker.
+
+### 6.4 Abrir la LAN (cuando llegue la placa)
+
+1. `pnpm mqtt:provision` y revisar que `broker/acl` tenga el nodo.
+2. Descomentar el bloque `listener 8883 0.0.0.0` en `broker/mosquitto.conf` y reiniciar `pnpm broker`.
+3. En el firewall de Windows, abrir 8883 solo para la subred del campus. Mosquitto en Windows no tiene `bind_interface`; el firewall es el control.
+4. Probar desde el equipo del broker: `pnpm mqtt:nodo -Nodo nodo-e01 -Espacio E01 -Estado OCUPADO -Puerto 8883`.
+
+### 6.5 Pruebas de banco
+
+Sin abrir la LAN se puede levantar un broker de banco en puertos alternos con los mismos certificados y ACL (`scripts/out-test/`). Verificado el 2026-10-28:
+
+- anónimo y clave incorrecta: rechazados;
+- TLS sin certificado de cliente: handshake rechazado;
+- `nodo-e01` publicando E01: aceptado; E02, otro nodo y `disponibles`: `PUBACK 135 Not authorized`;
+- nodo suscrito a `parq/#`: el broker concede la suscripción pero no entrega topics fuera de su ACL;
+- backend por 1883: lee el estado del nodo, publica `porteria` y comandos; no puede publicar como `nodo-e01`.
+
 - El servicio de Windows de Mosquitto se detuvo el 2026-10-12. Para que no vuelva a ocupar el 1883 al reiniciar: `Set-Service mosquitto -StartupType Manual` (PowerShell con admin).
 
 ## 7. Backend (`apps/server`)
 
 TypeScript ejecutado directo por Node 24 (type stripping, sin paso de build). El código real vive en el repo; el documento mantiene el diseño, no el código. Capas:
 
-- `src/config.ts`: env (`LOTE`, `ESPACIOS` = E01–E10 por defecto, `MQTT_*`, `ADMIN_TOKEN`, `PORT`).
+- `src/config.ts`: env (`LOTE`, `ESPACIOS` = E01-E30 por defecto, `MQTT_*`, `ADMIN_TOKEN`, `PORT`) y la lista `nodosAdmin` (`admin`, `porteria`, `salida`, `operador`).
 - `src/db.ts`: SQLite en WAL; tablas `espacios` y `ocupacion`; `save()` en transacción (solo cambios reales van al historial), `snapshot()`, `historial()`.
 - `src/mqtt.ts`: conexión con `mqtt.js`, suscripción `parq/+/+/espacios/+/estado` (QoS 1), validación del payload con Zod (`@parq/shared`), publicación del retained `disponibles` tras cada cambio.
 - `src/realtime.ts`: hub WebSocket en memoria (un proceso).
-- `src/http.ts`: Fastify; `GET /api/estado`, `GET /api/historial/:id`, `POST /api/espacios/:id` (header `x-admin-token`; body acepta `nodo` opcional y validado, p.ej. `porteria`/`salida`/`operador`, que aparece en el topic), `/ws`; sirve `apps/web/dist` si existe build.
+- `src/http.ts`: Fastify; `GET /api/estado`, `GET /api/historial/:id`, `POST /api/espacios/:id` (header `x-admin-token`; body acepta `nodo` opcional y validado, p.ej. `porteria`/`salida`/`operador`, que aparece en el topic), `/ws`; sirve `apps/web/dist` si existe build. El campo `nodo` del POST se valida contra `nodosAdmin`: fuera de esa lista responde 400 y no llega al broker.
 - `src/index.ts`: entrypoint; cablea MQTT → `save()` → `broadcast()`. La única vía de escritura es MQTT (el admin publica y todo se actualiza cuando el mensaje vuelve del broker).
 
 ## 8. Frontend (`apps/web`) — HMI institucional Unisucre
@@ -111,7 +167,7 @@ Vue 3 + Vite + Tailwind 4, organizado por funcionalidad:
 
 - `index.html` + `src/main.ts`: entrypoint Vite estándar (fuentes autoalojadas Barlow Condensed para titulares, Inter para UI y JetBrains Mono para datos; sin CDN).
 - `src/App.vue`: composición de pantallas + reloj + toasts de notificación + barra de controles (vigilancia/tema) en flujo.
-- `src/config/bahias.ts`: layout físico E01–E10 (posición en el plano = dato de presentación).
+- `src/config/bahias.ts`: layout físico E01-E30 (3 zonas; la posición en el plano es dato de presentación).
 - `src/services/`: `realtime.ts` (bus único WS con reconexión), `api.ts` (POST admin con `nodo`), `adminToken.ts`.
 - `src/lib/`: `sonido.ts` (WebAudio), `tiempo.ts` (relativos "hace X").
 - `src/features/parqueadero/`: `useParqueadero.ts` (estado real ← WS, única fuente de verdad), `simulacionVial.ts` (capa de presentación: motos animadas, FSM de talanquera, notificaciones, auto-demo; publica ocupación por REST→MQTPT real), `ParkingMap.vue` (plano SVG), `TarjetaBahia.vue`.
@@ -119,7 +175,7 @@ Vue 3 + Vite + Tailwind 4, organizado por funcionalidad:
 - `src/features/operador/PanelOperador.vue`: consola (bloqueo de talanquera, pruebas de tráfico, forzar plazas, auto-sim).
 - `src/types/hmi.ts` + `src/shared/ui/UnisucreLogo.vue`.
 
-**Regla de la simulación:** nada se inventa en el navegador. Los botones de tráfico publican por REST → MQTT (nodos `porteria`/`salida`/`operador` en el topic) y la HMI anima cuando el evento vuelve del broker por WS. Si un evento llega de afuera (admin en otra pestaña, `mosquitto_pub` o el ESP32 real), la animación se dispara igual. La talanquera animada es visualización local; su comando real al nodo está en §10. Origen: maqueta "parqhmi" (AI Studio) integrada el 2026-10-13; el hub MQTT falso, las placas inventadas y los restos de React quedaron fuera.
+**Regla de la simulación:** nada se inventa en el navegador. Los botones de tráfico publican por REST → MQTT (nodos `porteria`/`salida`/`operador` en el topic) y la HMI anima cuando el evento vuelve del broker por WS. Si un evento llega de afuera (admin en otra pestaña, `mosquitto_pub` o el ESP32 real), la animación se dispara igual. La talanquera animada es visualización local; su comando real al nodo está en §10. Origen: maqueta "parqhmi" integrada el 2026-10-13; el hub MQTT falso, las placas inventadas y los restos de React quedaron fuera.
 ## 9. Ejecución y pruebas
 
 ```
@@ -129,11 +185,11 @@ pnpm dev      # terminal 2: server (:8000, watch) + Vite (:5173, HMR)
 ```
 
 1. Abrir `http://localhost:5173/` (vista) y `http://localhost:5173/?admin` (admin, pide token) en dos pestañas. Un click en admin debe reflejarse en ambas. (`http://localhost:8000/` también sirve la UI si existe `apps/web/dist` tras `pnpm --filter @parq/web build`.)
-2. Simular un sensor externo sin pasar por el backend (con `-f` para evitar problemas de comillas en PowerShell):
-   ```
-   mosquitto_pub -u backend -P CLAVE -t parq/lote1/sensor1/espacios/E02/estado -q 1 -r -f payload.json
-   ```
-   con `{"v":1,"estado":"OCUPADO"}` en `payload.json`. Debe reflejarse igual: el backend no distingue al admin de un nodo real.
+2. Simular un sensor externo. Con la ACL activa, el backend ya no puede publicar como `sensor1`: cada nodo usa su certificado y solo su bahía.
+   - En banco (sin abrir 8883): `pnpm mqtt:nodo -Nodo nodo-e01 -Espacio E01 -Estado OCUPADO -Puerto 8884` contra el broker de banco.
+   - Con 8883 abierto: el mismo comando con `-Puerto 8883`.
+   - Para probar otra bahía, agrégala a `broker/nodos.json`, corre `pnpm mqtt:provision` y usa su certificado.
+   - El admin del HMI sigue publicando por REST con `nodo=porteria`/`salida`/`operador`; el servidor valida esa lista y la ACL la permite.
 3. Reiniciar el backend: el estado vuelve desde SQLite (`apps/server/parqueadero.db`).
 4. Borrar `parqueadero.db` y reiniciar: el estado se reconstruye desde los retained del broker (`broker/data/`).
 5. Consultar `/api/historial/E01`.
@@ -143,8 +199,9 @@ Carpintería verificada de punta a punta el 2026-10-12 sobre el monorepo real: a
 
 ## 10. Fuera de alcance por ahora (diferido)
 
-- ACL por nodo con `use_username_as_clientid` y `pattern write parq/+/%c/#`.
-- TLS (8883) y cliente ESP32 con mbedTLS.
+- Abrir el listener 8883 en la LAN y escribir el cliente MQTT/TLS del ESP32 (mbedTLS) con los certificados de §6.
+- Comandos a la talanquera: el topic `parq/<lote>/<nodo>/comandos/<dispositivo>` ya está reservado en la ACL; falta definir el payload y el TTL.
+- Rotación/revocación de certificados (CRL o reemisión) cuando haya más de un nodo.
 - Firmware del ESP32, talanquera y FSM de ocupación de 4 estados.
 - Listener WebSocket del broker (descartado mientras exista backend).
 - Migración a Postgres/Timescale y suscripciones compartidas (`$share`) para varias instancias del backend.
@@ -170,7 +227,7 @@ Evaluado para un ESP32 DevKit v1 que publica por WiFi.
 
 | Opción | Overhead por mensaje | Carga en el ESP32 | Infraestructura extra | Veredicto |
 |---|---|---|---|---|
-| MQTT sobre TCP (actual) | ~130–200 B en el aire por evento (publish QoS 1 + PUBACK + headers TCP/IP) | ~10–20 KB heap sin TLS, CPU despreciable | Ninguna (Mosquitto ya está) | **Elegida** |
+| MQTT sobre TLS 1.2 (elegida) | ~140–200 B en el aire por evento (publish QoS 1 + PUBACK + headers TCP/IP + ~29 B de registro TLS) | ~10–20 KB heap en régimen + 30–50 KB en el handshake mbedTLS | Ninguna (Mosquitto ya está); hay que abrir el 8883 y flashear certificados | **Elegida** |
 | CoAP (UDP) | El más ligero: header de 4 B | Similar RAM | Gateway CoAP→MQTT (Mosquitto no habla CoAP); se pierden retained/QoS tal cual | Descartado: solo compensa en dispositivos ultra-restringidos |
 | ESP-NOW + concentrador | Mínimo tiempo de aire, sin asociación WiFi | Muy baja en los nodos | ESP32 concentrador = punto único de falla + doble firmware | Diferido: solo si se supera la capacidad del AP (§10) |
 | HTTP polling | 300–600 B por request + handshake por conexión | Alta (el polling quema CPU y radio) | Ninguna | Descartado |
@@ -179,7 +236,8 @@ Evaluado para un ESP32 DevKit v1 que publica por WiFi.
 
 - Un cambio de puesto ≈ 200 B totales; a 10 eventos/min son ~2 kbps: insignificante frente a 802.11n. No compensa comprimir el payload a binario (CBOR/Protobuf).
 - El límite real de escalado no es MQTT sino el punto de acceso: un AP doméstico sostiene ~10–30 clientes. Más nodos ⇒ AP enterprise, más APs, o ESP-NOW con concentrador. Mosquitto aguanta órdenes de magnitud más que eso.
-- Lo que más pesa en el ESP32 es **TLS**, no MQTT: el handshake de mbedTLS usa ~30–50 KB de heap y 1–3 s de CPU. Por eso TLS queda diferido (§10); en LAN se mitiga con ACL y red dedicada.
+- Lo que más pesa en el ESP32 es **TLS**, no MQTT: el handshake de mbedTLS usa ~30–50 KB de heap y 1–3 s de CPU. El listener 8883 se abre cuando llegue la placa (§10); si el bench aprieta la RAM, las salidas son un concentrador ESP32 con ESP-NOW o un ESP32-S3 con PSRAM.
+- El sobrecosto por publicación es ~29 B de TLS (AES-GCM) sobre un payload de 26 B; el costo real es el handshake (≈2–3 KB en el aire, ~30–50 KB de heap y 1–3 s de CPU). Los certificados EC P-256 suman ~1,7 KB de flash en el nodo (CA + certificado + clave).
 
 ### Pautas para no saturar el ESP32 DevKit v1
 
@@ -259,3 +317,5 @@ Cada mejora que se haga al prototipo se anota aquí y se actualizan las seccione
 | 2026-10-18 | **Revert a 10 puestos (E01–E10) por decisión del equipo** — el campus de 30 y el rediseño oscuro del kiosco (tokens de Stitch) se deshacen. Kiosco: variante "Sereno" (blanco, un acento verde, Barlow + Chakra Petch + JetBrains Mono) restaurada desde `PrototipoKiosco.vue`; el prototipo en `/prototypes/kiosco` queda como fuente de respaldo. Plano: viewBox 1000×560, un solo patio de asfalto con 2 filas de 5 bahías y corredor central que empalma con la rampa (y=280); letrero "PARQUEADERO · E01–E10" pintado sobre el corredor. Ruta de la moto de vuelta a 3 fases: portería→corredor→bahía (la salida es el inverso). Analítica: pestaña de zonas vuelve a Norte (E01-E05) / Sur (E06-E10). Servidor: `ESPACIOS` por defecto E01–E10; `mqtt.ts` ya rechazaba mensajes de plazas fuera del config (línea de validación existente), se limpian los retained del broker (`broker/data/`) y las filas E11–E30 de SQLite. Verificado por CDP (`scripts/probe-revert.mjs`): 10 bahías, contenedor claro, sin jerga, FAB presente; trayectoria de salida completa por el corredor con `probe-track.mjs` (658 muestras, sin huecos) disparada por `mosquitto_pub` de un sensor externo | 4, 7, 8 |
 | 2026-10-20 | **Adopción del frontend de `origin/main` (a8f0a69) y auditoría de lógica.** Se adopta solo la capa visual: mapa de grilla contigua 5×2, 4 modelos de moto, modo claro/oscuro (claro por defecto), panel de operador y copia humanizada. Se **rechaza** el resto del commit: `ADMIN_TOKEN` con fallback hardcodeado, `db.ts` en memoria (sin persistencia y con lista de eventos sin poda), `viteBackendPlugin.ts` con backend falso, token de 3 caracteres y datos inventados, y borrado de `pnpm-workspace.yaml`/`pnpm-lock.yaml` + `bun.lock`. Correcciones aplicadas: fuentes autoalojadas (Barlow Condensed/Inter/JetBrains, sin CDN), alto contraste en oscuro, escala 200 % con etiqueta propia y persistencia, objetivos táctiles de 44 px, barra de controles en flujo (sin solaparse al 150-200 %), `aria-live` de cupos, bahías navegables por teclado, flechas de corredor en dos sentidos y placeholder de token sin ejemplo. Auditoría: 0 hallazgos críticos de seguridad en el servidor actual; pendientes P2/P3 documentados (tema no persistido, tipografía Inter vs. brief original, etiquetas del plano en móvil, arranque automático de simulación retirado). Verificado por CDP en :5173 y :8000, build limpio y sin peticiones externas | 4, 7, 8, 9 |
 | 2026-10-20 | **Talanquera: la salida ya abre y el brazo abre completo.** (1) `salida()` y los eventos reales `LIBRE` no llamaban `abrirTalanquera()`: la moto atravesaba el brazo cerrado. Ahora la salida abre al arrancar el tween y cierra en `done()` después de borrar la animación; `resolverEsperas()` conserva la puerta abierta si hay una moto esperando. (2) Se reemplazaron los dos temporizadores sueltos por uno solo (`timerTalanquera`) para que apertura y cierre no se pisen. (3) `barrierAngle` ya no pasa por -50/-25/-85: `abriendo` y `abierta` comparten 90°, `cerrando` y `cerrada` comparten 0°. Eso elimina el segundo tramo que hacía que el brazo pareciera trabarse; el giro es uno solo de 450 ms con `cubic-bezier(0.23, 1, 0.32, 1)` (reduced-motion: 1 ms). (4) Geometría: cerrado baja y cruza el carril; abierto gira 90° a la izquierda y queda paralelo al andén, fuera del carril y de E01 (antes -90° lo metía sobre la primera plaza). El soporte de descanso queda al final del brazo cerrado y el aviso "PASO BLOQUEADO" sale del grupo giratorio para no quedar de lado. Verificado con `scripts/probe-exit.mjs` por CDP: salida abre desde el inicio, llega a 90°, cierra al terminar; entrada recorre 0→90→0; 0 errores de consola; `pnpm -r check` y build limpios. (5) Referencia visual con Stitch (skill `stitch-design-taste`): proyecto `13225817094122459320` "Sereno 10 puestos Puerta Roja", pantallas `daf2cdbf574949989262e6666a1275c0` (kiosco claro) y `d48c50e8335941218368b99951ad031a` (ficha de la talanquera). Se adopta la idea "abierta 90°, brazo fuera del carril, sin efecto molinete"; se rechazan la jerga inventada (LPR, modo automático, sincronizado), la tipografía Hanken y los datos falsos. La lógica de simulación sigue intacta: solo se retiró el arranque automático al cargar; los botones manuales y el toggle de auto-simulación siguen publicando por REST→MQTT. Capturas: `scripts/out-newfront/entry-abierta.png`, `exit-abierta.png`, `stitch-talanquera.png` | 4, 7, 8 |
+| 2026-10-28 | **Broker endurecido con mTLS + ACL por nodo.** Se separan dos listeners: 1883 en loopback para el backend (usuario/clave + ACL) y 8883 para nodos (mTLS con `require_certificate` y `use_identity_as_username`), este último comentado hasta conectar la placa. Se migra de `password_file`/`acl_file`/`per_listener_settings` (deprecados en 2.1) a los plugins `mosquitto_password_file` y `mosquitto_acl_file`. `broker/nodos.json` define el mapa nodo→bahías; `pnpm mqtt:provision` genera CA EC P-256, certificado de servidor con SAN, certificados de cliente con CN = nodo, `.pem` para flashear y `broker/acl`. La ACL deja que `backend` lea `parq/#` y escriba solo `disponibles`, las identidades `admin`/`porteria`/`salida`/`operador` y comandos; `nodo-e01` solo escribe E01 y lee sus comandos. El backend valida `nodo` contra esa lista (400 si no existe). Probado en 1886/8886: anónimo y clave mala rechazados, sin certificado no hay handshake, `nodo-e01` acepta E01 y recibe 135 en E02/otro nodo/`disponibles`, y el backend lee el estado del nodo. Certificados: nodo 753 B + clave 241 B + CA 725 B (≈1,7 KB en flash); el sobrecosto TLS es ~29 B por publicación y el costo real es el handshake (~30–50 KB heap, 1–3 s). `.env.example`, `.gitignore` y `broker/certs/` actualizados. Sin commits. | 1, 2, 4, 5, 6, 7, 9, 10, 12, 14 |
+| 2026-10-28 | **Limpieza del repo.** Se retira el export de AI Studio (`parqhmi---telemetría-y-monitor-de-parqueadero/` y su `.zip`), que duplicaba la maqueta y arrastraba `metadata.json`, `GEMINI_API_KEY` y un hub MQTT falso. También salen 31 scripts de sondeo de un solo uso (`probe-*`, `shot-*`, `mutar-plano.cjs`, `test-ws.mjs`), el prototipo `/prototypes/kiosco`, el logo duplicado `Unisucre.svg.webp` de la raíz y el rastro de Stitch (`.stitch/`, `.secrets/`, MCP en `opencode.json` y skills de `.opencode/`). Quedan solo `apps/`, `packages/`, `broker/`, `firmware/` y los scripts de operación (`broker.ps1`, `mqtt-*.ps1`, `provision-mqtt.ps1`). `pnpm -r check` y build en verde. Sin commits. | 1, 3, 6, 9, 14 |

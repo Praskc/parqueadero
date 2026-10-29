@@ -6,6 +6,8 @@ dist/
 .env
 broker/passwd
 broker/data/
+# PKI del broker: la CA y las claves privadas de los nodos nunca van al repo.
+broker/certs/
 
 # Secretos locales (API keys) — nunca al repo
 .secrets/

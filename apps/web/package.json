@@ -4,15 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000 --host 0.0.0.0",
     "build": "vite build",
     "check": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/barlow": "^5.3.0",
-    "@fontsource/barlow-condensed": "^5.3.0",
-    "@fontsource/inter": "^5.3.0",
+    "@fontsource/chakra-petch": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/opendyslexic": "^5.3.0",
     "@parq/shared": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "tailwindcss": "^4.3.3",

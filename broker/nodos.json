@@ -1,0 +1,14 @@
+{
+  "lote": "lote1",
+  "backend": {
+    "usuario": "backend",
+    "identidades": ["admin", "porteria", "salida", "operador"]
+  },
+  "nodos": [
+    {
+      "nombre": "nodo-e01",
+      "espacios": ["E01"],
+      "nota": "Nodo de banco: E01 + talanquera (firmware/nodo-parqueadero). Agregar aquí cada nodo nuevo antes de provisionar."
+    }
+  ]
+}

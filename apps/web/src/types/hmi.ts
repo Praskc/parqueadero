@@ -20,6 +20,7 @@ export interface Bahia {
   estado: EstadoVista;
   ts: number | null;
   posicion: PosicionMapa;
+  estamento?: "estudiantes" | "docentes" | "administrativos";
 }
 
 export interface NotificacionHMI {
@@ -39,6 +40,7 @@ export interface AnimacionMoto {
   origen?: Origen;
   etapa: EtapaMoto;
   posicionActual: PosicionMapa;
+  oculto?: boolean;
   modelo?: "scooter" | "clasica" | "enduro" | "deportiva";
   color?: string;
   cascoColor?: string;

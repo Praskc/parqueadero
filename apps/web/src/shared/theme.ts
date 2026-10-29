@@ -4,9 +4,17 @@ export type Tema = "claro" | "oscuro";
 
 const TEMA_KEY = "parq_tema_preferido";
 
-// Requisito del usuario: "en este caso muestrae el claro"
-// Por defecto siempre 'claro', respetando la instrucción explícita del usuario
-export const tema = ref<Tema>("claro");
+function leerTemaInicial(): Tema {
+  if (typeof window === "undefined") return "claro";
+  try {
+    return localStorage.getItem(TEMA_KEY) === "oscuro" ? "oscuro" : "claro";
+  } catch {
+    return "claro";
+  }
+}
+
+// Por defecto en modo institucional claro; conmutable desde el menú de accesibilidad.
+export const tema = ref<Tema>(leerTemaInicial());
 
 export function toggleTema() {
   tema.value = tema.value === "claro" ? "oscuro" : "claro";
@@ -22,7 +30,9 @@ if (typeof window !== "undefined") {
     (val) => {
       try {
         localStorage.setItem(TEMA_KEY, val);
-      } catch {}
+      } catch {
+        // Sin persistencia disponible
+      }
       if (val === "oscuro") {
         document.documentElement.classList.add("dark");
         document.documentElement.classList.remove("light");
@@ -34,11 +44,9 @@ if (typeof window !== "undefined") {
         document.body.classList.add("bg-[#f1f5f9]", "text-slate-900");
         document.body.classList.remove("bg-[#0b1120]", "text-slate-100");
       }
-      // La barra del navegador / borde del kiosco acompaña al tema.
-      document
-        .querySelector('meta[name="theme-color"]')
-        ?.setAttribute("content", val === "oscuro" ? "#0b1120" : "#f1f5f9");
     },
-    { immediate: true }
+    { immediate: true },
   );
 }
+
+

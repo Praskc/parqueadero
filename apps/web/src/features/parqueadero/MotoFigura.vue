@@ -1,13 +1,5 @@
 <script setup lang="ts">
-/**
- * Figura de motocicleta en VISTA AÉREA (cenital), orientada a +x (sentido de marcha).
- * Soporta 4 modelos diferenciados y variaciones de color y piloto:
- *  1. Scooter urbana (BWS / NMAX): plataforma plana, baúl trasero, líneas redondeadas.
- *  2. Clásica / Trabajo (Boxer / YBR): tanque alargado de gota, parrilla cromada, asiento corrido.
- *  3. Enduro / Todoterreno (XTZ / XR): guardabarros elevado "pico de pato", manillar ancho con protector, llantas de tacos.
- *  4. Deportiva / Naked (Pulsar / Duke): tanque musculoso con tomas de aire, colín afilado, asiento doble nivel.
- */
-
+// Silueta cenital arquitectónica de motocicleta orientada a +x (estacionada sin piloto o en circulación con piloto).
 withDefaults(
   defineProps<{
     modelo?: "scooter" | "clasica" | "enduro" | "deportiva";
@@ -20,7 +12,7 @@ withDefaults(
   {
     modelo: "clasica",
     color: "#15803d",
-    cascoColor: "#eab308",
+    cascoColor: "#f8fafc",
     faro: true,
     pata: false,
     etiqueta: "",
@@ -30,211 +22,258 @@ withDefaults(
 
 <template>
   <g class="moto-figura select-none">
-    <!-- Haz luminoso del faro delantero proyectado al pavimento (cuando está en marcha) -->
+    <!-- Haz luminoso proyectado cuando la motocicleta circula -->
     <path
-      v-if="faro"
-      d="M 18 -3 L 65 -16 C 72 -7, 72 7, 65 16 L 18 3 Z"
+      v-if="faro && !pata"
+      d="M 24 -2.5 L 68 -15 C 74 -6, 74 6, 68 15 L 24 2.5 Z"
       fill="url(#headlight-unisucre)"
-      opacity="0.85"
+      opacity="0.78"
       pointer-events="none"
     />
 
-    <!-- Sombra suave de la moto sobre el asfalto -->
-    <ellipse cx="0" cy="1.5" rx="20" ry="7.5" fill="#020617" opacity="0.4" filter="blur(1px)" />
+    <!-- Sombra proyectada sobre el asfalto (inclinada cuando reposa sobre la pata lateral) -->
+    <ellipse
+      :cx="pata ? -0.5 : 0"
+      :cy="pata ? 2.8 : 1.4"
+      rx="24"
+      :ry="pata ? 7.8 : 6.8"
+      fill="#020617"
+      opacity="0.45"
+    />
 
-    <!-- ==================== MODELO 1: SCOOTER ==================== -->
-    <g v-if="modelo === 'scooter'">
-      <!-- Ruedas compactas con rin de aleación -->
-      <rect x="8" y="-3" width="9" height="6" rx="3" fill="#0f172a" />
-      <rect x="-17" y="-3" width="9" height="6" rx="3" fill="#0f172a" />
-      <circle cx="12.5" cy="0" r="1.5" fill="#94a3b8" />
-      <circle cx="-12.5" cy="0" r="1.5" fill="#94a3b8" />
-
-      <!-- Plataforma plana para pies -->
-      <rect x="-2" y="-5.5" width="8" height="11" rx="2" fill="#1e293b" stroke="#334155" stroke-width="0.5" />
-      <line x1="0" y1="-4" x2="0" y2="4" stroke="#475569" stroke-width="0.6" stroke-dasharray="1 1" />
-
-      <!-- Escudo frontal aerodinámico -->
-      <path d="M 6 -5.5 C 10 -6, 14 -4.5, 16 0 C 14 4.5, 10 6, 6 5.5 Z" :fill="color" stroke="#ffffff" stroke-width="0.6" />
-
-      <!-- Asiento ancho confortable -->
-      <path d="M -1 -4 C -6 -4.5, -10 -4, -12 0 C -10 4, -6 4.5, -1 4 Z" fill="#0f172a" stroke="#334155" stroke-width="0.5" />
-
-      <!-- Baúl trasero porta-casco (Top Box) -->
-      <rect x="-18.5" y="-4.2" width="6.5" height="8.4" rx="1.8" :fill="color" stroke="#ffffff" stroke-width="0.5" />
-      <line x1="-15" y1="-3.5" x2="-15" y2="3.5" stroke="#ffffff" stroke-width="0.6" opacity="0.6" />
-
-      <!-- Manubrio cubierto con carenado -->
-      <path d="M 7 -6.5 Q 10 -7 10 0 Q 10 7 7 6.5" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round" />
-      <circle cx="9" cy="-7.5" r="1.2" fill="#38bdf8" />
-      <circle cx="9" cy="7.5" r="1.2" fill="#38bdf8" />
-
-      <!-- Faro delantero doble -->
-      <ellipse cx="16" cy="-1.8" rx="1.2" ry="1.5" fill="#fef08a" />
-      <ellipse cx="16" cy="1.8" rx="1.2" ry="1.5" fill="#fef08a" />
-      <rect x="-19" y="-2" width="1.2" height="4" rx="0.6" fill="#ef4444" />
+    <!-- Pata lateral extendida (solo cuando está estacionada en bahía) -->
+    <g v-if="pata">
+      <line x1="-2" y1="3.5" x2="-7.5" y2="10.2" stroke="#64748b" stroke-width="1.6" stroke-linecap="round" />
+      <ellipse cx="-8" cy="10.5" rx="1.6" ry="1" fill="#334155" />
     </g>
 
-    <!-- ==================== MODELO 2: CLÁSICA / TRABAJO ==================== -->
-    <g v-else-if="modelo === 'clasica'">
-      <!-- Ruedas de radio estándar -->
-      <rect x="7" y="-2.6" width="11.5" height="5.2" rx="2.6" fill="#0f172a" />
-      <rect x="-18.5" y="-2.6" width="11.5" height="5.2" rx="2.6" fill="#0f172a" />
+    <!-- Posapiés laterales y pedal de freno/cambios -->
+    <line x1="-2" y1="-7.2" x2="-2" y2="7.2" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+    <rect x="-3.4" y="-8" width="2.8" height="1.5" rx="0.6" fill="#0f172a" />
+    <rect x="-3.4" y="6.5" width="2.8" height="1.5" rx="0.6" fill="#0f172a" />
 
-      <!-- Guardabarros delantero y trasero -->
-      <rect x="8.5" y="-3.2" width="8.5" height="6.4" rx="3" :fill="color" stroke="#ffffff" stroke-width="0.5" />
-      <rect x="-17" y="-3" width="8.5" height="6" rx="2.8" :fill="color" stroke="#ffffff" stroke-width="0.5" />
-
-      <!-- Escape cromado lateral -->
-      <line x1="3" y1="4.5" x2="-14" y2="4.5" stroke="#cbd5e1" stroke-width="1.4" stroke-linecap="round" />
-      <rect x="-18.5" y="3.5" width="6.5" height="2" rx="1" fill="#94a3b8" />
-
-      <!-- Bloque de motor con aletas de refrigeración -->
-      <rect x="-3" y="-5" width="5.5" height="1.8" rx="0.8" fill="#1e293b" />
-      <rect x="-3" y="3.2" width="5.5" height="1.8" rx="0.8" fill="#1e293b" />
-
-      <!-- Tanque de gota clásico -->
-      <path d="M 0 -4.5 C 3 -5.5, 6 -5.2, 7.8 -4 L 7.8 4 C 6 5.2, 3 5.5, 0 4.5 Z" :fill="color" stroke="#ffffff" stroke-width="0.7" />
-      <circle cx="4" cy="0" r="1.1" fill="#cbd5e1" stroke="#475569" stroke-width="0.4" />
-
-      <!-- Asiento largo biplaza con costuras -->
-      <path d="M -0.5 -3.8 C -4.5 -4.2, -8 -3.8, -10.5 -2.8 C -11.5 -2, -11.5 2, -10.5 2.8 C -8 3.8, -4.5 4.2, -0.5 3.8 Z" fill="#0f172a" stroke="#334155" stroke-width="0.5" />
-      <line x1="-3.5" y1="-3" x2="-3.5" y2="3" stroke="#475569" stroke-width="0.5" />
-
-      <!-- Parrilla metálica trasera cromada -->
-      <rect x="-16.5" y="-3.5" width="5.5" height="7" rx="1" fill="none" stroke="#cbd5e1" stroke-width="0.8" />
-      <line x1="-14" y1="-3.5" x2="-14" y2="3.5" stroke="#cbd5e1" stroke-width="0.7" />
-
-      <!-- Manubrio tubular con puños negros y espejos -->
-      <line x1="9" y1="-7" x2="9" y2="7" stroke="#334155" stroke-width="1.8" stroke-linecap="round" />
-      <rect x="8" y="-8.5" width="2" height="2.8" rx="0.9" fill="#0f172a" />
-      <rect x="8" y="5.7" width="2" height="2.8" rx="0.9" fill="#0f172a" />
-      <circle cx="7" cy="-9" r="1.3" fill="#38bdf8" stroke="#0f172a" stroke-width="0.4" />
-      <circle cx="7" cy="9" r="1.3" fill="#38bdf8" stroke="#0f172a" stroke-width="0.4" />
-
-      <!-- Faro redondo clásico -->
-      <ellipse cx="18.5" cy="0" rx="1.5" ry="2.2" fill="#fef08a" stroke="#f59e0b" stroke-width="0.6" />
-      <ellipse cx="-18.8" cy="0" rx="0.9" ry="1.6" fill="#ef4444" stroke="#991b1b" stroke-width="0.4" />
+    <!-- Llanta trasera expuesta y basculante -->
+    <g>
+      <rect x="-25.5" y="-2.8" width="12.5" height="5.6" rx="2.6" fill="#090d16" stroke="#1e293b" stroke-width="0.6" />
+      <line x1="-24" y1="0" x2="-14.5" y2="0" stroke="#334155" stroke-width="1.2" stroke-dasharray="1.5 1.5" />
+      <!-- Basculante trasero y disco/cadena -->
+      <line x1="-10" y1="-3.3" x2="-19.5" y2="-3.1" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
+      <line x1="-10" y1="3.3" x2="-19.5" y2="3.1" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
+      <rect x="-21" y="-2.2" width="3.5" height="0.7" fill="#94a3b8" />
     </g>
 
-    <!-- ==================== MODELO 3: ENDURO / TODOTERRENO ==================== -->
-    <g v-else-if="modelo === 'enduro'">
-      <!-- Llantas de tacos agresivos -->
-      <rect x="7" y="-2.8" width="12" height="5.6" rx="2.8" fill="#0f172a" />
-      <rect x="-19" y="-3.2" width="11" height="6.4" rx="3.2" fill="#0f172a" />
+    <!-- Tren delantero articulado (rueda + barras telescópicas + faro + manubrio) -->
+    <g :transform="pata ? 'rotate(-10, 10, 0)' : undefined">
+      <!-- Llanta delantera sobresaliente -->
+      <rect x="13.5" y="-2.5" width="12" height="5" rx="2.4" fill="#090d16" stroke="#1e293b" stroke-width="0.6" />
+      <line x1="15" y1="0" x2="24" y2="0" stroke="#334155" stroke-width="1" stroke-dasharray="1.5 1.5" />
+      <!-- Disco de freno delantero -->
+      <rect x="17.5" y="2.3" width="4.2" height="0.7" fill="#cbd5e1" />
 
-      <!-- Guardabarros delantero elevado tipo "pico de pato" -->
-      <polygon points="6,-2.8 19,0 6,2.8" :fill="color" stroke="#ffffff" stroke-width="0.6" />
-
-      <!-- Guardabarros trasero alto -->
-      <polygon points="-8,-3.2 -18.5,0 -8,3.2" :fill="color" stroke="#ffffff" stroke-width="0.5" />
-
-      <!-- Silenciador alto de escape (estilo rally) -->
-      <rect x="-18" y="-5.5" width="8" height="2.2" rx="1.1" fill="#475569" stroke="#64748b" stroke-width="0.5" />
-      <line x1="-1" y1="-4.5" x2="-10" y2="-4.8" stroke="#cbd5e1" stroke-width="1.2" />
-
-      <!-- Tanque delgado enduro -->
-      <path d="M 0 -3.6 L 5.5 -4.2 L 5.5 4.2 L 0 3.6 Z" :fill="color" stroke="#ffffff" stroke-width="0.6" />
-
-      <!-- Asiento plano y recto hacia el tanque -->
-      <path d="M -0.5 -3.2 L -9.5 -3 L -11 0 L -9.5 3 L -0.5 3.2 Z" fill="#1e293b" stroke="#334155" stroke-width="0.5" />
-
-      <!-- Manubrio ancho con protector central y cubre-manos -->
-      <line x1="8.5" y1="-8.5" x2="8.5" y2="8.5" stroke="#1e293b" stroke-width="2" stroke-linecap="round" />
-      <rect x="7.5" y="-2" width="2" height="4" rx="0.8" fill="#eab308" />
-      <!-- Cubre-manos (handguards) -->
-      <path d="M 6 -9 Q 10 -9.5 10 -7" fill="none" :stroke="color" stroke-width="1.8" stroke-linecap="round" />
-      <path d="M 6 9 Q 10 9.5 10 7" fill="none" :stroke="color" stroke-width="1.8" stroke-linecap="round" />
-
-      <!-- Máscara de faro enduro -->
-      <polygon points="15,-2.2 18,0 15,2.2" fill="#fef08a" stroke="#d97706" stroke-width="0.5" />
-      <rect x="-19.2" y="-1.2" width="1.2" height="2.4" rx="0.6" fill="#ef4444" />
-    </g>
-
-    <!-- ==================== MODELO 4: DEPORTIVA / NAKED ==================== -->
-    <g v-else>
-      <!-- Llantas anchas de perfil bajo con cinta decorativa -->
-      <rect x="7" y="-3.2" width="11.5" height="6.4" rx="3.2" fill="#0f172a" />
-      <rect x="-18.5" y="-3.8" width="11.5" height="7.6" rx="3.8" fill="#0f172a" />
-      <circle cx="12.5" cy="0" r="2.2" fill="none" stroke="#f43f5e" stroke-width="0.5" />
-      <circle cx="-13" cy="0" r="2.6" fill="none" stroke="#f43f5e" stroke-width="0.5" />
-
-      <!-- Escape corto deportivo ventral -->
-      <rect x="-4" y="3.8" width="6.5" height="2.5" rx="1.2" fill="#334155" stroke="#64748b" stroke-width="0.6" />
-      <circle cx="2" cy="5" r="0.8" fill="#0f172a" />
-
-      <!-- Tanque esculpido con tomas de aire laterales prominentes -->
+      <!-- Guardabarros delantero corto sobre la llanta -->
       <path
-        d="M -1 -4 C 1 -6.8, 5.5 -7, 7.5 -5 L 8.5 0 L 7.5 5 C 5.5 7, 1 6.8, -1 4 Z"
+        v-if="modelo === 'enduro'"
+        d="M 10 -2.6 L 21.5 -1.1 L 21.5 1.1 L 10 2.6 Z"
         :fill="color"
-        stroke="#ffffff"
+        stroke="#0f172a"
+        stroke-width="0.7"
+      />
+      <rect
+        v-else
+        x="12"
+        y="-2.8"
+        width="7.8"
+        height="5.6"
+        rx="2.4"
+        :fill="modelo === 'deportiva' ? '#1e293b' : color"
+        stroke="#0f172a"
+        stroke-width="0.7"
+      />
+
+      <!-- Barras telescópicas de suspensión (horquilla) -->
+      <line x1="9.5" y1="-3.1" x2="19.5" y2="-2.9" stroke="#cbd5e1" stroke-width="1.3" stroke-linecap="round" />
+      <line x1="9.5" y1="3.1" x2="19.5" y2="2.9" stroke="#cbd5e1" stroke-width="1.3" stroke-linecap="round" />
+
+      <!-- Óptica / faro delantero y tablero de instrumentos -->
+      <path
+        d="M 12.2 -3.2 C 15.8 -3, 16.8 -1.8, 16.8 0 C 16.8 1.8, 15.8 3, 12.2 3.2 Z"
+        fill="#1e293b"
+        stroke="#0f172a"
+        stroke-width="0.7"
+      />
+      <ellipse cx="16.4" cy="0" rx="1.1" ry="2.1" fill="#fef08a" />
+      <rect x="10.2" y="-2.2" width="2.2" height="4.4" rx="0.8" fill="#0f172a" stroke="#475569" stroke-width="0.5" />
+
+      <!-- Manubrio curvado hacia atrás con maniguetas, puños y espejos retrovisores -->
+      <path
+        d="M 7.8 -10.8 L 9.8 -6.2 L 10.6 0 L 9.8 6.2 L 7.8 10.8"
+        fill="none"
+        stroke="#cbd5e1"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <!-- Maniguetas de embrague y freno delantero -->
+      <line x1="9.2" y1="-7.2" x2="11.4" y2="-10.2" stroke="#94a3b8" stroke-width="0.85" stroke-linecap="round" />
+      <line x1="9.2" y1="7.2" x2="11.4" y2="10.2" stroke="#94a3b8" stroke-width="0.85" stroke-linecap="round" />
+      <!-- Puños de caucho negro -->
+      <line x1="8.7" y1="-7.6" x2="7.5" y2="-11.2" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
+      <line x1="8.7" y1="7.6" x2="7.5" y2="11.2" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Espejos retrovisores en varilla -->
+      <line x1="9.5" y1="-6.8" x2="11.2" y2="-11.6" stroke="#334155" stroke-width="0.9" />
+      <line x1="9.5" y1="6.8" x2="11.2" y2="11.6" stroke="#334155" stroke-width="0.9" />
+      <ellipse cx="11.4" cy="-12.3" rx="1.3" ry="2.1" transform="rotate(-18, 11.4, -12.3)" fill="#0f172a" stroke="#64748b" stroke-width="0.5" />
+      <ellipse cx="11.4" cy="12.3" rx="1.3" ry="2.1" transform="rotate(18, 11.4, 12.3)" fill="#0f172a" stroke="#64748b" stroke-width="0.5" />
+    </g>
+
+    <!-- Motor y sistema de escape lateral derecho -->
+    <rect x="-1.5" y="-5.6" width="6.5" height="11.2" rx="1.8" fill="#334155" stroke="#0f172a" stroke-width="0.6" />
+    <path d="M 3 4.8 L -7 5.5 L -18.5 5" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+    <rect x="-19.5" y="3.8" width="8.5" height="2.6" rx="1.2" fill="#475569" stroke="#0f172a" stroke-width="0.6" />
+
+    <!-- Carrocería según variante (tanque esculpido, asiento biplaza y colín) -->
+    <g v-if="modelo === 'scooter'">
+      <!-- Plataforma reposapiés plana de scooter -->
+      <rect x="0.5" y="-6" width="8.2" height="12" rx="2.2" fill="#1e293b" stroke="#0f172a" stroke-width="0.7" />
+      <line x1="2.5" y1="-4.2" x2="6.8" y2="-4.2" stroke="#475569" stroke-width="0.7" />
+      <line x1="2.5" y1="4.2" x2="6.8" y2="4.2" stroke="#475569" stroke-width="0.7" />
+      <!-- Escudo frontal envolvente -->
+      <path
+        d="M 7.5 -6.2 C 11 -6.2, 13 -4.2, 13.4 0 C 13 4.2, 11 6.2, 7.5 6.2 Z"
+        :fill="color"
+        stroke="#0f172a"
         stroke-width="0.8"
       />
-      <!-- Brillo aerodinámico en hombros del tanque -->
-      <line x1="2" y1="-4.5" x2="6" y2="-3.8" stroke="#ffffff" stroke-width="0.7" opacity="0.6" />
-      <line x1="2" y1="4.5" x2="6" y2="3.8" stroke="#ffffff" stroke-width="0.7" opacity="0.6" />
-
-      <!-- Asiento doble nivel deportivo (piloto + colín afilado de pasajero) -->
-      <polygon points="-1.5,-3.5 -6.5,-3 -6.5,3 -1.5,3.5" fill="#0f172a" stroke="#334155" stroke-width="0.5" />
-      <polygon points="-7,-2 -15,0 -7,2" :fill="color" stroke="#ffffff" stroke-width="0.6" />
-      <rect x="-10.5" y="-1.8" width="3" height="3.6" rx="0.8" fill="#1e293b" />
-
-      <!-- Semimanillares deportivos con espejos aerodinámicos -->
-      <line x1="8.5" y1="-6.5" x2="8.5" y2="6.5" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" />
-      <circle cx="7" cy="-7.5" r="1.1" fill="#38bdf8" />
-      <circle cx="7" cy="7.5" r="1.1" fill="#38bdf8" />
-
-      <!-- Óptica frontal afilada LED -->
-      <polygon points="16,-3 19,0 16,3" fill="#fef08a" stroke="#eab308" stroke-width="0.6" />
-      <!-- Stop trasero LED doble -->
-      <circle cx="-15.5" cy="-1" r="0.9" fill="#ef4444" />
-      <circle cx="-15.5" cy="1" r="0.9" fill="#ef4444" />
+      <!-- Carenado trasero lateral y asiento ancho -->
+      <path
+        d="M 1 -5.6 L -15 -4.6 C -17.5 -3.6, -17.5 3.6, -15 4.6 L 1 5.6 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.8"
+      />
+      <path
+        d="M 1.2 -4.2 L -12.8 -3.8 C -14.8 -3, -14.8 3, -12.8 3.8 L 1.2 4.2 Z"
+        fill="#0f172a"
+        stroke="#334155"
+        stroke-width="0.6"
+      />
+      <line x1="-5.5" y1="-3.6" x2="-5.5" y2="3.6" stroke="#334155" stroke-width="0.7" />
     </g>
 
-    <!-- ==================== CONDUCTOR / PILOTO ==================== -->
-    <g transform="translate(-1.5, 0)">
-      <!-- Brazos del motociclista extendidos hacia el manubrio -->
-      <line x1="0" y1="-3.5" x2="8.5" y2="-5.8" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" />
-      <line x1="0" y1="3.5" x2="8.5" y2="5.8" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" />
-
-      <!-- Hombros / Torso -->
-      <ellipse cx="-1.5" cy="0" rx="3.6" ry="4.5" fill="#1e293b" stroke="#334155" stroke-width="0.6" />
-
-      <!-- Casco de seguridad con visera -->
-      <circle cx="0.5" cy="0" r="3.2" :fill="cascoColor" stroke="#0f172a" stroke-width="0.8" />
-      <!-- Visera reflectiva oscura apuntando hacia adelante (+x) -->
-      <path d="M 2.2 -2.1 Q 3.8 0 2.2 2.1" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round" />
-      <line x1="2.2" y1="-1" x2="3" y2="0" stroke="#38bdf8" stroke-width="0.6" opacity="0.85" />
+    <g v-else-if="modelo === 'deportiva'">
+      <!-- Colín trasero afilado -->
+      <path
+        d="M -5 -4.4 L -18.5 -1.8 L -18.5 1.8 L -5 4.4 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.8"
+      />
+      <!-- Asiento deportivo escalonado (piloto + pasajero) -->
+      <path
+        d="M 0.5 -3.8 L -7.8 -4.1 L -9.2 -2.8 L -9.2 2.8 L -7.8 4.1 L 0.5 3.8 Z"
+        fill="#0f172a"
+        stroke="#334155"
+        stroke-width="0.6"
+      />
+      <rect x="-15.5" y="-2.3" width="4.8" height="4.6" rx="1" fill="#1e293b" stroke="#0f172a" stroke-width="0.5" />
+      <!-- Tanque musculoso con aletas laterales y hendidura de rodillas -->
+      <path
+        d="M -0.5 -3.6 C 1.2 -6.6, 6.8 -7, 10.2 -4.6 L 11.2 0 L 10.2 4.6 C 6.8 7, 1.2 6.6, -0.5 3.6 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.85"
+      />
+      <path d="M 2 -4.8 L 8.2 -3.8" stroke="#ffffff" stroke-width="0.8" opacity="0.28" stroke-linecap="round" />
+      <circle cx="6.2" cy="0" r="1.2" fill="#cbd5e1" stroke="#334155" stroke-width="0.5" />
     </g>
 
-    <!-- Pata de apoyo (solo para motos estacionadas) -->
-    <g v-if="pata">
-      <line x1="-3" y1="4" x2="-7" y2="8" stroke="#0f172a" stroke-width="1.6" stroke-linecap="round" />
-      <circle cx="-7" cy="8" r="1" fill="#475569" />
+    <g v-else-if="modelo === 'enduro'">
+      <!-- Colín esbelto todoterreno -->
+      <path
+        d="M -6 -3.2 L -19 -1.8 L -19 1.8 L -6 3.2 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.75"
+      />
+      <!-- Asiento corrido angosto -->
+      <path
+        d="M 2.5 -3.1 L -13.5 -3 C -14.8 -2.2, -14.8 2.2, -13.5 3 L 2.5 3.1 Z"
+        fill="#0f172a"
+        stroke="#334155"
+        stroke-width="0.6"
+      />
+      <!-- Tanque esbelto con cubiertas de radiador -->
+      <path
+        d="M 1.5 -3.1 L 5.5 -5.8 L 10.5 -4.2 L 10.5 4.2 L 5.5 5.8 L 1.5 3.1 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.8"
+      />
+      <circle cx="6.8" cy="0" r="1.1" fill="#cbd5e1" stroke="#334155" stroke-width="0.5" />
     </g>
 
-    <!-- ==================== ROTULO / ETIQUETA EN MOVIMIENTO ==================== -->
-    <!-- Coincide con probe-track: ASIGNADA, SALIENDO, ESPERANDO -->
-    <g v-if="etiqueta" transform="translate(0, -18)" filter="url(#shadow-unisucre)">
+    <g v-else>
+      <!-- Parrilla trasera tubular y guardabarros de moto urbana clásica -->
+      <rect x="-19" y="-3.2" width="5.8" height="6.4" rx="1.4" fill="none" stroke="#94a3b8" stroke-width="0.9" />
+      <line x1="-16.2" y1="-3.2" x2="-16.2" y2="3.2" stroke="#94a3b8" stroke-width="0.7" />
+      <!-- Asiento biplaza acanalado con cintura estrecha -->
+      <path
+        d="M 0.5 -3.4 C -3 -4.2, -9.5 -4.3, -13.8 -3.5 C -15 -2.6, -15 2.6, -13.8 3.5 C -9.5 4.3, -3 4.2, 0.5 3.4 Z"
+        fill="#0f172a"
+        stroke="#334155"
+        stroke-width="0.65"
+      />
+      <line x1="-4.5" y1="-3.5" x2="-4.5" y2="3.5" stroke="#334155" stroke-width="0.6" />
+      <line x1="-9.2" y1="-3.6" x2="-9.2" y2="3.6" stroke="#334155" stroke-width="0.6" />
+      <!-- Tanque clásico en forma de lágrima -->
+      <path
+        d="M -0.2 -3.2 C 1.8 -5.8, 6.8 -6, 9.8 -4.1 C 11 -2.6, 11 2.6, 9.8 4.1 C 6.8 6, 1.8 5.8, -0.2 3.2 Z"
+        :fill="color"
+        stroke="#0f172a"
+        stroke-width="0.85"
+      />
+      <path d="M 2.2 -4.1 Q 5.8 -4.6, 8.6 -3" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.28" stroke-linecap="round" />
+      <circle cx="5.8" cy="0" r="1.2" fill="#cbd5e1" stroke="#334155" stroke-width="0.5" />
+    </g>
+
+    <!-- Luz de freno trasera -->
+    <rect x="-19.8" y="-1.7" width="1.3" height="3.4" rx="0.5" fill="#dc2626" />
+
+    <!-- Piloto en posición de conducción (únicamente cuando la moto está en marcha) -->
+    <g v-if="!pata">
+      <!-- Brazos sujetando los puños del manubrio -->
+      <path d="M -1.5 -5.2 Q 3.5 -8.5, 7.8 -9.6" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" />
+      <path d="M -1.5 5.2 Q 3.5 8.5, 7.8 9.6" fill="none" stroke="#1e293b" stroke-width="2.4" stroke-linecap="round" />
+      <!-- Guantes sobre puños -->
+      <circle cx="8" cy="-9.6" r="1.3" fill="#0f172a" />
+      <circle cx="8" cy="9.6" r="1.3" fill="#0f172a" />
+      <!-- Chaqueta / hombros del motociclista -->
+      <ellipse cx="-2.2" cy="0" rx="3.8" ry="6.2" fill="#1e293b" stroke="#0f172a" stroke-width="0.8" />
+      <!-- Casco integral con visor oscuro -->
+      <ellipse cx="0.6" cy="0" rx="4.1" ry="3.8" :fill="cascoColor" stroke="#0f172a" stroke-width="0.85" />
+      <path d="M 2.2 -2.6 C 4.4 -1.6, 4.4 1.6, 2.2 2.6 Z" fill="#0f172a" />
+    </g>
+
+    <!-- Rótulo compacto de bahía asignada solo cuando aplica -->
+    <g v-if="etiqueta" transform="translate(0, -19)">
       <rect
-        :x="-(etiqueta.length * 3.6 + 8)"
-        y="-7"
-        :width="etiqueta.length * 7.2 + 16"
-        height="14"
-        rx="7"
-        :fill="etiqueta.includes('ASIGNADA') ? '#14532d' : etiqueta.includes('ESPERANDO') ? '#78350f' : '#0c4a6e'"
-        stroke="#ffffff"
-        stroke-width="1"
+        :x="-(etiqueta.length * 3.4 + 6)"
+        y="-6"
+        :width="etiqueta.length * 6.8 + 12"
+        height="12"
+        rx="2.5"
+        :fill="etiqueta === 'ESPERA' ? '#78350f' : '#0f172a'"
+        stroke="#64748b"
+        stroke-width="0.8"
       />
       <text
         x="0"
-        y="3"
-        fill="#ffffff"
-        font-size="8.5"
-        font-weight="900"
+        y="2.8"
+        fill="#f8fafc"
+        font-size="7.5"
+        font-weight="700"
         font-family="'JetBrains Mono', monospace"
         text-anchor="middle"
-        letter-spacing="0.5"
       >
         {{ etiqueta }}
       </text>

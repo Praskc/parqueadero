@@ -5,7 +5,7 @@
  * mismo diseño, ahora en SVG puro sin dependencias externas.
  *
  * Anillo exterior: % ocupación total. Anillo interior: desglose por zonas
- * físicas del campus — Norte (E01–E05) y Sur (E06–E10).
+ * físicas del campus: Norte (E01 a E05) y Sur (E06 a E10).
  */
 import { computed, ref, watch } from "vue";
 import type { Bahia } from "../../types/hmi";
@@ -112,7 +112,7 @@ const segmentos = computed(() => {
         >
           <span
             class="w-2 h-2 rounded-full"
-            :class="bloqueada ? 'bg-red-500' : lleno ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'"
+            :class="bloqueada ? 'bg-red-500' : lleno ? 'bg-[#eab308]' : 'bg-emerald-500 animate-pulse'"
           />
           <span class="font-mono text-emerald-800 font-extrabold">{{ porcentaje }}%</span>
           <span class="text-[9px] text-slate-500 uppercase tracking-wide">Aforo</span>
@@ -141,16 +141,16 @@ const segmentos = computed(() => {
           <span class="relative flex h-1.5 w-1.5">
             <span
               class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-              :class="bloqueada ? 'bg-red-400' : lleno ? 'bg-amber-400' : 'bg-emerald-400'"
+              :class="bloqueada ? 'bg-red-400' : lleno ? 'bg-[#facc15]' : 'bg-emerald-400'"
             />
             <span
               class="relative inline-flex rounded-full h-1.5 w-1.5"
-              :class="bloqueada ? 'bg-red-500' : lleno ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="bloqueada ? 'bg-red-500' : lleno ? 'bg-[#eab308]' : 'bg-emerald-500'"
             />
           </span>
           <span
             class="text-[8px] font-bold px-1 py-0.2 rounded"
-            :class="bloqueada ? 'bg-red-100 text-red-700' : lleno ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
+            :class="bloqueada ? 'bg-red-100 text-red-700' : lleno ? 'bg-[#fef9c3] text-[#715a00]' : 'bg-emerald-100 text-emerald-800'"
           >
             {{ bloqueada ? "BLOQ" : lleno ? "LLENO" : `${porcentaje}%` }}
           </span>
