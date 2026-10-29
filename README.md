@@ -33,6 +33,7 @@
 - **Consola de portería.** Bloqueo de la talanquera, cambio manual de plazas, maniobras de tráfico, analítica del día y libro de registros.
 - **Accesibilidad de verdad.** Escala hasta 200 %, tipografías legibles, alto contraste, navegación por teclado y objetivos táctiles de 44 px.
 - **Operación local.** Sin servicios en la nube: el broker, la base de datos y la UI corren en el equipo del kiosco.
+- **Un comando y listo.** `docker compose up --build` deja broker, backend y HMI funcionando, con la PKI, la ACL y las claves generadas.
 
 ## Capturas
 
@@ -55,6 +56,7 @@
 | Contrato | [Zod](https://zod.dev/) | Validación de payloads y topics compartidos |
 | Hardware | [ESP32](https://www.espressif.com/en/products/socs/esp32) + [Arduino](https://www.arduino.cc/) | Nodo de plaza y talanquera |
 | Herramientas | [Node.js 24](https://nodejs.org/) + [pnpm 11](https://pnpm.io/) | Runtime y monorepo |
+| Despliegue | [Docker](https://docs.docker.com/) | Un comando levanta broker + backend + HMI |
 
 ## Cómo funciona
 
@@ -106,21 +108,44 @@ parqueadero/
 │     ├─ src/features/parqueadero/ Plano SVG, figuras y simulación vial
 │     └─ src/shared/              Tema, accesibilidad, pie institucional
 ├─ packages/shared/               Contrato MQTT y tipos (Zod)
-├─ broker/                        mosquitto.conf, nodos.json y ACL generada
+├─ broker/                        mosquitto.conf, nodos.json, ACL y su Dockerfile
 ├─ firmware/                      Nodo ESP32: E01 + talanquera
+├─ docker/                        Scripts de arranque en contenedor
 ├─ docs/capturas/                 Imágenes de este README
+├─ docs/docker.md                 Guía completa de Docker
+├─ Dockerfile                     Imagen de la aplicación (API + HMI)
+├─ compose.yaml                   Stack completo: broker + app
 └─ scripts/                       Arranque del broker y aprovisionamiento
 ```
 
 ## Puesta en marcha
 
-### Requisitos
+### Opción A · Docker (la más simple)
+
+Con [Docker Desktop](https://docs.docker.com/desktop/) o Docker Engine, un solo comando levanta el broker, el backend y la HMI:
+
+```bash
+docker compose up --build
+```
+
+La primera vez el servicio `mqtt-init` genera la PKI, el usuario del broker, la ACL y las claves; después todo arranca solo. La aplicación queda en **http://localhost:8000**.
+
+```bash
+docker compose down      # detener (los datos y certificados se conservan)
+docker compose logs -f app
+```
+
+Guía completa, certificados para el ESP32 y resolución de problemas: [`docs/docker.md`](docs/docker.md).
+
+### Opción B · Nativo
+
+#### Requisitos
 
 - [Node.js 24](https://nodejs.org/) y [pnpm 11](https://pnpm.io/)
 - [Mosquitto 2.1](https://mosquitto.org/download/) o superior
 - [PowerShell 7](https://github.com/PowerShell/PowerShell) (`pwsh`)
 
-### Instalación
+#### Instalación
 
 ```powershell
 pnpm install
@@ -221,7 +246,7 @@ Así, una clave robada no basta para hacerse pasar por un sensor: hace falta su 
 
 ## Documentación
 
-[`contexto-mqtt-parqueadero.md`](contexto-mqtt-parqueadero.md) reúne el diseño completo: contrato MQTT, broker y PKI, API, HMI, firmware y el historial de decisiones del equipo.
+[`contexto-mqtt-parqueadero.md`](contexto-mqtt-parqueadero.md) reúne el diseño completo: contrato MQTT, broker y PKI, API, HMI, firmware y el historial de decisiones del equipo. La guía de contenedores está en [`docs/docker.md`](docs/docker.md).
 
 ## Licencia
 

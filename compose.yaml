@@ -1,0 +1,90 @@
+# Stack completo del parqueadero: broker MQTT + backend Fastify + HMI servida
+# por el propio backend. Un solo comando lo levanta todo:
+#
+#   docker compose up --build
+#
+# La primera vez, el servicio `mqtt-init` genera la PKI, el usuario del broker,
+# la ACL y las claves (.env). Después el broker y la app arrancan solos.
+#
+# En Linux, si quieres que los archivos generados en el repo no queden como
+# root:  DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up --build
+
+name: parqueadero
+
+services:
+  # ------------------------------------------------------------ aprovisionamiento
+  # Genera CA, certificados, ACL, broker/passwd y las claves en .env.
+  # Se ejecuta una vez por cada `up` y termina con código 0.
+  mqtt-init:
+    build:
+      context: .
+      dockerfile: broker/Dockerfile
+    image: parqueadero-broker:local
+    command: ["bash", "/repo/scripts/provision-mqtt.sh"]
+    environment:
+      MQTT_USER: backend
+    volumes:
+      - .:/repo
+    user: "${DOCKER_UID:-0}:${DOCKER_GID:-0}"
+    restart: "no"
+
+  # ------------------------------------------------------------------- broker
+  broker:
+    build:
+      context: .
+      dockerfile: broker/Dockerfile
+    image: parqueadero-broker:local
+    depends_on:
+      mqtt-init:
+        condition: service_completed_successfully
+    environment:
+      # 1 = abre el listener 8883 con mTLS para los nodos ESP32.
+      # Se deja en 0 hasta que llegue la placa.
+      NODES_LISTENER: "${NODES_LISTENER:-0}"
+    ports:
+      # Solo desde la máquina: el backend entra por la red interna de compose.
+      - "127.0.0.1:1883:1883"
+      # Nodos sensores (mTLS). Descomentar cuando llegue la placa:
+      # - "8883:8883"
+    volumes:
+      - .:/repo
+      - broker-data:/mosquitto/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          set -a; . /repo/.env; set +a;
+          mosquitto_pub -h 127.0.0.1 -p 1883
+          -u "$$MQTT_USER" -P "$$MQTT_PASS"
+          -t 'parq/lote1/backend/comandos/healthcheck' -m ok
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------- app
+  # Backend Fastify + HMI compilada (la sirve el mismo backend en /).
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: parqueadero-app:local
+    depends_on:
+      broker:
+        condition: service_healthy
+    environment:
+      MQTT_URL: mqtt://broker:1883
+      HOST: 0.0.0.0
+      PORT: 8000
+      DB_PATH: /data/parqueadero.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/repo
+      - app-data:/data
+    restart: unless-stopped
+
+volumes:
+  broker-data:
+  app-data:

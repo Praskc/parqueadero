@@ -1,0 +1,19 @@
+# Contexto de build: solo lo necesario para las imágenes.
+.git
+.gitignore
+node_modules
+**/node_modules
+**/dist
+**/.env
+.env
+broker/certs
+broker/data
+broker/passwd
+broker/log
+scripts/out*
+**/*.db
+**/*.db-shm
+**/*.db-wal
+docs/capturas
+*.md
+!README.md
