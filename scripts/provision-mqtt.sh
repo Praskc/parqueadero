@@ -1,26 +1,5 @@
 #!/usr/bin/env bash
 # Aprovisiona la PKI local del broker y regenera broker/acl desde broker/nodos.json.
-#
-# Equivalente POSIX de scripts/provision-mqtt.ps1: corre en el contenedor de
-# aprovisionamiento (docker compose), en WSL2, Linux o macOS.
-#
-# Qué hace:
-#   1. Valida broker/nodos.json (nombres, bahías y solapamientos).
-#   2. Crea la CA local (EC P-256, 10 años) si no existe.
-#   3. Emite el certificado del servidor (SAN configurable) y uno por nodo,
-#      con CN = nombre MQTT: el certificado ES la identidad del nodo.
-#   4. Genera broker/acl desde el mismo mapa, para que ACL y certificados no
-#      puedan desincronizarse.
-#   5. Escribe broker/passwd (usuario del backend) y sincroniza las claves
-#      ADMIN_TOKEN / MQTT_USER / MQTT_PASS en .env y apps/server/.env.
-#
-# Variables opcionales:
-#   MQTT_PASS    clave del usuario del backend (si no, se toma de los .env o se genera)
-#   ADMIN_TOKEN  token del panel de operador (mínimo 12 caracteres)
-#   MQTT_USER    usuario del backend (por defecto "backend")
-#   SERVER_HOSTS SAN adicional del certificado del servidor (separado por comas)
-#   FORCE=1      rota los certificados de servidor y nodos, conservando la CA
-#   NEW_CA=1     rota también la CA (invalida todo lo emitido)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

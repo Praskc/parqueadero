@@ -1,11 +1,4 @@
-/**
- * Capa de simulación vial del HMI (solo presentación).
- *
- * El estado REAL de las bahías llega por WebSocket desde el backend (MQTT).
- * Las motos y la talanquera animadas son ilustrativas; toda ocupación se
- * publica por REST → MQTT con el contrato de §4 (mismos topics y payload que
- * usará el ESP32). Nada se "inventa" en el navegador.
- */
+// Capa de simulación vial del HMI (solo presentación).
 import { computed, reactive, ref } from "vue";
 import type { Estado, MensajeWs } from "@parq/shared";
 import { onMensaje } from "../../services/realtime";
@@ -70,11 +63,6 @@ function randomMotoProps() {
   return { modelo, color, cascoColor };
 }
 
-/**
- * Inserta la animación y devuelve SIEMPRE el proxy reactivo.
- * Escribir sobre el objeto crudo después de `set()` no dispara Vue:
- * todos los tween deben mutar este proxy, no la referencia original.
- */
 function addAnim(a: AnimacionMoto): AnimacionMoto {
   const props = randomMotoProps();
   const completo: AnimacionMoto = {
@@ -98,10 +86,7 @@ function primeraOcupada(): string | undefined {
   return BAHIA_LAYOUT.find((b) => estados[b.id] === "OCUPADO" && !bahiaReservada(b.id))?.id;
 }
 
-/**
- * Separación de tráfico: la siguiente moto arranca unos ms después de las
- * activas para no montarse encima en la calle/corredor.
- */
+// Separación de tráfico: la siguiente moto arranca después de las activas.
 function retardoPorTrafico(): number {
   return [...anims.values()].filter((a) => a.etapa !== "esperando").length * 800;
 }
@@ -174,8 +159,7 @@ function tween(anim: AnimacionMoto, durMs: number, frame: (p: number) => void, d
   requestAnimationFrame(step);
 }
 
-/** Tramo portería → bahía siguiendo el circuito unidireccional en sentido horario:
- *  portería → curva S norte → pasillo norte (oriente) → [retorno oriental → pasillo sur (occidente)] → bahía. */
+// Tramo portería → bahía siguiendo el circuito horario.
 function tramoRuta(anim: AnimacionMoto, espacioId: string, publicarAlFinal: boolean) {
   const bahia = BAHIA_LAYOUT.find((b) => b.id === espacioId);
   if (!bahia) return;
@@ -270,8 +254,7 @@ function tramoRuta(anim: AnimacionMoto, espacioId: string, publicarAlFinal: bool
   });
 }
 
-/** Salida respetando el circuito unidireccional horario:
- *  bahía → [pasillo norte (oriente) → retorno oriental →] pasillo sur (occidente) → curva S salida → portería → calle exterior. */
+// Salida respetando el circuito horario.
 function animarSalida(espacioId: string, publicarAlFinal: boolean, retardoMs = 0) {
   const bahia = BAHIA_LAYOUT.find((b) => b.id === espacioId);
   if (!bahia) return;
@@ -453,7 +436,7 @@ function animarIngresoConEspera(
   debeEsperar: boolean,
   origen: Origen,
 ) {
-  // Fase de calle dentro del lienzo visible para que nunca asome solo el faro en el borde
+  // Fase de calle dentro del lienzo visible.
   const laneY = CIRCULACION.entradaY[0];
   const inicio = origen === "norte" ? { x: 3.5, y: 6.5, rot: 90 } : { x: 8.0, y: 93.5, rot: -90 };
   tween(anim, durCalle(), (p) => {
@@ -607,8 +590,7 @@ function onEventoReal(id: string, estado: Estado) {
     sonido.parqueo();
     notificar("ingreso", `Plaza ${id} ocupada`, "Ocupación registrada por el sensor de celda.", id, "baja");
     if (bahiaReservada(id)) {
-      // El sensor confirma que el vehículo ya está en la celda: se retira la
-      // animación en tránsito para no dibujar dos vehículos en la misma plaza.
+      // El sensor confirma la ocupación.
       for (const a of [...anims.values()]) {
         if (a.tipo === "ingreso" && a.espacioId === id) anims.delete(a.id);
       }

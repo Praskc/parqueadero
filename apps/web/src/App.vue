@@ -74,7 +74,7 @@ onUnmounted(() => {
       Saltar al plano del parqueadero
     </a>
 
-    <!-- Tablero operativo completo en el primer alto de pantalla (100dvh) con barra superior institucional de ancho completo -->
+    <!-- Tablero operativo principal -->
     <div class="min-h-dvh w-full bg-campus-surface flex flex-col">
       <PantallaUsuario
         :bahias="bahias"

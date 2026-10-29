@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS ocupacion (
   estado TEXT NOT NULL, ts INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_oc ON ocupacion(lote, espacio, ts);
 `);
-// Migración suave: el registro de eventos ahora guarda qué nodo publicó.
+// Migración suave: la tabla ocupacion guarda el nodo que publicó.
 try { db.prepare("SELECT nodo FROM ocupacion LIMIT 1").get(); }
 catch { db.exec("ALTER TABLE ocupacion ADD COLUMN nodo TEXT"); }
 
@@ -37,7 +37,7 @@ const upsert = db.prepare(`INSERT INTO espacios VALUES (@lote,@espacio,@estado,@
 const logEv = db.prepare(
   "INSERT INTO ocupacion(lote,espacio,estado,ts,nodo) VALUES (@lote,@espacio,@estado,@ts,@nodo)");
 
-// El historial solo registra cambios reales: los retained se reentregan al reconectar.
+// El historial solo registra cambios reales.
 export const save = db.transaction((r: Registro) => {
   if ((getEsp.get(r.lote, r.espacio) as FilaEspacio | undefined)?.estado !== r.estado) logEv.run(r);
   upsert.run(r);

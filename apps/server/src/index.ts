@@ -7,8 +7,7 @@ import { buildApp } from "./http.ts";
 
 const snap = () => snapshot(config.lote, [...config.espacios]);
 
-// La única vía de escritura es MQTT: el admin publica y todo se actualiza
-// cuando el mensaje vuelve del broker (lazo completo probado sin ESP32).
+// La única vía de escritura es MQTT.
 const mq = startMqtt({
   onEstado: (r) => {
     save(r);
