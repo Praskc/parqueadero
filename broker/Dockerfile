@@ -1,7 +1,10 @@
 # Broker Mosquitto con las herramientas para aprovisionar la PKI.
 # La imagen oficial trae el broker; aquí se suman openssl, jq y los clientes
 # MQTT para que `scripts/provision-mqtt.sh` corra dentro del contenedor.
-FROM eclipse-mosquitto:2
+#
+# Versión fijada a la misma del broker nativo (2.1.2) para que el comportamiento
+# de plugins, TLS y ACL sea el mismo en las dos instalaciones.
+FROM eclipse-mosquitto:2.1.2-alpine
 
 USER root
 RUN apk add --no-cache bash jq openssl \

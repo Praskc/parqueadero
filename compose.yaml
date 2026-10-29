@@ -6,6 +6,10 @@
 # La primera vez, el servicio `mqtt-init` genera la PKI, el usuario del broker,
 # la ACL y las claves (.env). Después el broker y la app arrancan solos.
 #
+# Endurecimiento: broker y app corren sin privilegios, con el sistema de
+# archivos de solo lectura, sin capabilities y sin poder escalar privilegios.
+# El único servicio que escribe en el repo es `mqtt-init`, que termina solo.
+#
 # En Linux, si quieres que los archivos generados en el repo no queden como
 # root:  DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up --build
 
@@ -15,6 +19,8 @@ services:
   # ------------------------------------------------------------ aprovisionamiento
   # Genera CA, certificados, ACL, broker/passwd y las claves en .env.
   # Se ejecuta una vez por cada `up` y termina con código 0.
+  # Es el único servicio con escritura sobre el repo, por eso conserva
+  # capabilities: tiene que poder crear archivos propiedad del usuario.
   mqtt-init:
     build:
       context: .
@@ -26,6 +32,9 @@ services:
     volumes:
       - .:/repo
     user: "${DOCKER_UID:-0}:${DOCKER_GID:-0}"
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
     restart: "no"
 
   # ------------------------------------------------------------------- broker
@@ -47,8 +56,21 @@ services:
       # Nodos sensores (mTLS). Descomentar cuando llegue la placa:
       # - "8883:8883"
     volumes:
-      - .:/repo
+      # Solo lectura: el broker no modifica el repo.
+      - .:/repo:ro
       - broker-data:/mosquitto/data
+    user: "1883:1883"
+    read_only: true
+    tmpfs:
+      - /mosquitto/config:uid=1883,gid=1883,mode=0750
+      - /tmp:uid=1883,gid=1883,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    mem_limit: 256m
+    stop_grace_period: 10s
     healthcheck:
       test:
         - CMD-SHELL
@@ -81,8 +103,20 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/repo
+      # Solo lectura: la app únicamente lee las claves de /repo/.env.
+      - .:/repo:ro
       - app-data:/data
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    mem_limit: 512m
+    stop_grace_period: 15s
     restart: unless-stopped
 
 volumes:

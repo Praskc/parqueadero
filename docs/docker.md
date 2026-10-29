@@ -90,6 +90,27 @@ docker compose down -v              # borrar también los volúmenes (¡pierde e
 
 El script `scripts/provision-mqtt.sh` y el de PowerShell dejan las claves en los mismos archivos (`.env` y `apps/server/.env`), así que puedes alternar entre una instalación y otra sin volver a configurar.
 
+## Endurecimiento de contenedores
+
+| Control | Cómo se aplica |
+|---|---|
+| Usuario sin privilegios | `broker` corre como `1883:1883` y `app` como `1000:1000` |
+| Sistema de archivos de solo lectura | `read_only: true` en broker y app; solo `/tmp` y `/mosquitto/config` son tmpfs escribibles |
+| Capabilities | `cap_drop: ALL` en todos los servicios |
+| No escalar privilegios | `no-new-privileges:true` en `mqtt-init`, `broker` y `app` |
+| Límites de recursos | `pids_limit: 100` y `mem_limit` (256 MB broker, 512 MB app) |
+| Imágenes fijadas | `eclipse-mosquitto:2.1.2-alpine` (misma versión que el broker nativo) y `node:24.22.2-bookworm-slim` |
+| Repo de solo lectura | `.` montado como `:ro` en `broker` y `app`; solo `mqtt-init` escribe (y termina solo) |
+| Listener de nodos | `8883` cerrado por defecto (`NODES_LISTENER=0`); se abre solo cuando llegue la placa ESP32 con mTLS |
+| Puerto 1883 | Publicado solo en `127.0.0.1`, no expuesto a la red |
+
+La sonda de seguridad también se ejecuta contra el stack levantado con Docker:
+
+```bash
+docker compose up --build
+pnpm security:check   # contra http://localhost:8000
+```
+
 ## Si algo falla
 
 | Síntoma | Causa probable | Qué hacer |

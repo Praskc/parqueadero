@@ -201,6 +201,29 @@ El broker escucha en dos puertos:
 
 Así, una clave robada no basta para hacerse pasar por un sensor: hace falta su certificado y su clave privada. Para agregar un nodo: edita `broker/nodos.json`, ejecuta `pnpm mqtt:provision` y reinicia el broker.
 
+## Seguridad
+
+| Capa | Control |
+|---|---|
+| SQL | Todas las consultas van con parámetros (`prepare` + `?` / `@nombre`). El id de plaza se valida contra la lista configurada **antes** de tocar la base |
+| Salida | Vue interpola: no hay `v-html` ni `innerHTML`. CSP `default-src 'self'` con `frame-ancestors 'none'` |
+| Cabeceras | `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, `Cross-Origin-Resource-Policy: same-origin`, `Permissions-Policy` y HSTS cuando el tráfico ya es HTTPS |
+| Token | `ADMIN_TOKEN` obligatorio (mínimo 12 caracteres), comparación en tiempo constante (`timingSafeEqual`) y *fail-closed*: sin token el servidor no arranca |
+| Autorización | El token protege el panel, el cambio de plazas, el historial y la analítica. `/api/estado` es público a propósito: es el tablero del kiosco |
+| WebSocket | `/ws` rechaza con 403 los orígenes cruzados, antes incluso del *upgrade* |
+| MQTT | Usuario/clave + ACL por identidad en 1883; mTLS con ACL por nodo en 8883. El certificado **es** la identidad del sensor: una clave robada no basta |
+| DoS | 120 peticiones/min en el endpoint de operador y 10/min en la verificación de token; `max_packet_size 1024` y `max_connections 64` en el broker |
+| Dependencias | `pnpm audit` sin hallazgos; los parches de las transitivas se fijan con `overrides` en `pnpm-workspace.yaml` |
+| Contenedores | Usuario sin privilegios, sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges`, límites de memoria y de PIDs, imágenes con versión fijada |
+
+Sonda de seguridad reutilizable:
+
+```bash
+pnpm security:check
+```
+
+30 pruebas: cabeceras, inyección SQL por path y por body, autenticación, autorización, origen del WebSocket, acceso anónimo al broker e integridad de la base al final. Sale con código 1 si algo falla, así que se puede meter en CI.
+
 ## API HTTP
 
 | Método | Ruta | Auth | Uso |
@@ -222,6 +245,7 @@ Así, una clave robada no basta para hacerse pasar por un sensor: hace falta su 
 | `pnpm mqtt:nodo` | Publica como nodo con certificado (banco de pruebas, 8883) |
 | `pnpm mqtt:log` | Sigue los mensajes del broker |
 | `pnpm check` | Typecheck de todos los paquetes |
+| `pnpm security:check` | Sonda de 30 pruebas: cabeceras, inyección SQL, auth, autorización, WS y broker anónimo |
 
 ## Accesibilidad
 
