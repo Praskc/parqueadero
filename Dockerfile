@@ -16,15 +16,16 @@ WORKDIR /app
 FROM base AS deps
 # better-sqlite3 trae binarios precompilados, pero si no hay para esta
 # arquitectura compila: por eso están las herramientas de build.
+ENV PNPM_CONFIG_IGNORE_SCRIPTS=false
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm rebuild better-sqlite3 || true
 
 # ------------------------------------------------------------ build de la web
 FROM deps AS build
@@ -34,15 +35,16 @@ RUN pnpm --filter @parq/web build
 
 # ------------------------------------------------- dependencias de producción
 FROM base AS prod-deps
+ENV PNPM_CONFIG_IGNORE_SCRIPTS=false
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/shared/package.json packages/shared/
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --ignore-scripts --prod
+RUN pnpm rebuild better-sqlite3 || true
 
 # ------------------------------------------------------------------ runtime
 FROM base AS runtime

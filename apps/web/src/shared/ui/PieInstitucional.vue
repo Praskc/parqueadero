@@ -1,5 +1,22 @@
 <script setup lang="ts">
 // Pie de página institucional oficial de la Universidad de Sucre (visible únicamente al desplazarse debajo del tablero).
+// Métricas del parqueadero en tiempo real (no estáticas): alimentadas desde App.vue vía WebSocket.
+import { computed } from "vue";
+
+const props = defineProps<{
+  ocupadas: number;
+  disponibles: number;
+  sinDato: number;
+  total: number;
+  conectado: boolean;
+}>();
+
+const ocupadasPct = computed(() =>
+  props.total > 0 ? Math.round((props.ocupadas / props.total) * 100) : 0,
+);
+const libresPct = computed(() =>
+  props.total > 0 ? Math.round((props.disponibles / props.total) * 100) : 0,
+);
 </script>
 
 <template>
@@ -80,18 +97,29 @@
         </div>
       </div>
 
-      <!-- Columna 3: Visitas y redes oficiales -->
+      <!-- Columna 3: Estado del parqueadero (tiempo real, no estático) -->
       <div class="text-sm leading-relaxed min-w-0">
         <div>
           <h2 class="font-body font-bold text-lg text-[#f3e69f]">
-            Visitas
+            Estado del parqueadero
           </h2>
           <ul class="mt-3 space-y-0.5 text-white tabular-nums">
-            <li>Today's Views: 2.990</li>
-            <li>Visitantes hoy: 831</li>
-            <li>Last 30 Days Views: 137.244</li>
-            <li>Total Views: 4.447.003</li>
-            <li>Total visitantes: 1.029.104</li>
+            <li>
+              <span class="inline-block w-20">Ocupadas:</span>
+              <span>{{ ocupadas }} / {{ total }} ({{ ocupadasPct }}%)</span>
+            </li>
+            <li>
+              <span class="inline-block w-20">Disponibles:</span>
+              <span>{{ disponibles }} ({{ libresPct }}%)</span>
+            </li>
+            <li>
+              <span class="inline-block w-20">Sin dato:</span>
+              <span>{{ sinDato }}</span>
+            </li>
+            <li>
+              <span class="inline-block w-20">Conectado:</span>
+              <span>{{ props.conectado ? "SÍ" : "NO" }}</span>
+            </li>
           </ul>
         </div>
 

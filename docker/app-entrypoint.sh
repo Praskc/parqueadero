@@ -9,11 +9,12 @@ set -e
 
 cd /app/apps/server
 
-if [ -f /repo/.env ]; then
-  # El .env puede venir de Windows con CRLF: se normaliza antes de sourced.
-  tr -d '\r' < /repo/.env > /tmp/parq.env
+# Las credenciales vienen por environment de compose; el .env es solo fallback.
+# En Docker Desktop/Windows el volumen montado puede no ser legible por uid 1000.
+if [ -f /repo/.env ] && [ -r /repo/.env ]; then
+  tr -d '\r' < /repo/.env > /tmp/parq.env 2>/dev/null || true
   set -a
-  . /tmp/parq.env
+  . /tmp/parq.env 2>/dev/null || true
   set +a
 fi
 

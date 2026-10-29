@@ -15,7 +15,15 @@ import BotonVolverArriba from "./shared/ui/BotonVolverArriba.vue";
 import PieInstitucional from "./shared/ui/PieInstitucional.vue";
 
 // Estado en tiempo real alimentado por WebSocket y MQTT.
-const { conectado, bahias, disponibles, ultimaActualizacion, total } = useParqueadero();
+const {
+  conectado,
+  bahias,
+  disponibles,
+  ocupadas,
+  sinDato,
+  ultimaActualizacion,
+  total,
+} = useParqueadero();
 
 const operadorAbierto = ref(false);
 const horaActual = ref("");
@@ -87,7 +95,13 @@ onUnmounted(() => {
     </div>
 
     <!-- Pie institucional visible únicamente al hacer scroll hacia abajo -->
-    <PieInstitucional />
+    <PieInstitucional
+      :ocupadas="ocupadas"
+      :disponibles="disponibles"
+      :sinDato="sinDato"
+      :total="total"
+      :conectado="conectado"
+    />
 
     <!-- Botón flotante para volver arriba cuando el scroll llega al final del documento -->
     <BotonVolverArriba />
