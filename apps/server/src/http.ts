@@ -55,12 +55,24 @@ export async function buildApp(deps: HttpDeps) {
   await app.register(websocket);
 
   // Cabeceras de seguridad en todas las respuestas
-  app.addHook("onSend", async (_req, reply) => {
+  app.addHook("onSend", async (req, reply) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Content-Security-Policy",
-      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'");
+      // font-src necesita data: porque @fontsource incrusta las tipografias
+      // como data: URI dentro del CSS. connect-src 'self' cubre el WebSocket
+      // del mismo origen (Chrome/Edge tratan ws/wss como el mismo origen).
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'");
+    // Aislamiento del documento: la HMI no carga nada de terceros, así que
+    // puede declarar ambas políticas sin romper ninguna tipografía ni imagen.
+    reply.header("Cross-Origin-Opener-Policy", "same-origin");
+    reply.header("Cross-Origin-Embedder-Policy", "require-corp");
+    reply.header("Cross-Origin-Resource-Policy", "same-origin");
+    reply.header("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
+    // HSTS solo cuando el tráfico ya es HTTPS: en HTTP el navegador lo ignora.
+    if (req.protocol === "https")
+      reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   });
 
   // En producción sirve el build de la web; en dev la sirve Vite (con proxy).
@@ -81,11 +93,19 @@ export async function buildApp(deps: HttpDeps) {
     return { ok: true };
   });
 
-  app.get<{ Params: { id: string } }>("/api/historial/:id", (req) =>
-    deps.historial(req.params.id));
+  /** El historial y la analítica son datos de operación: exigen clave de operador. */
+  app.get<{ Params: { id: string } }>("/api/historial/:id", (req, reply) => {
+    if (!tokenValido(req.headers["x-admin-token"]))
+      return reply.code(401).send({ error: "no autorizado" });
+    return deps.historial(req.params.id);
+  });
 
   /** Analítica del día (fuente real: tabla `ocupacion` en SQLite). */
-  app.get("/api/analitica/hoy", () => deps.eventosHoy());
+  app.get("/api/analitica/hoy", (req, reply) => {
+    if (!tokenValido(req.headers["x-admin-token"]))
+      return reply.code(401).send({ error: "no autorizado" });
+    return deps.eventosHoy();
+  });
 
   app.post<{ Params: { id: string }; Body: { estado?: unknown; nodo?: unknown } }>(
     "/api/espacios/:id", (req, reply) => {

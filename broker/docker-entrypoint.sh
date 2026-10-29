@@ -3,10 +3,14 @@
 #
 # El repo trae broker/mosquitto.conf para la instalación nativa (Windows, rutas
 # relativas y plugins .dll). En el contenedor las rutas cambian y la versión de
-# Mosquitto puede ser 2.0 (sin plugins) o 2.1 (con plugins), así que aquí se
-# arma la configuración equivalente detectando qué hay disponible.
+# Mosquitto puede traer plugins o no, así que aquí se arma la configuración
+# equivalente detectando qué hay disponible.
 #
-# Las fuentes de verdad siguen siendo los archivos del repo montados en /repo:
+# El contenedor corre como usuario sin privilegios (1883) y con el sistema de
+# archivos de solo lectura: todo lo que se escribe vive en un tmpfs y el
+# material de la PKI se copia desde el repo montado en :ro.
+#
+# Fuentes de verdad (repo montado en /repo):
 #   /repo/broker/passwd  usuarios con clave
 #   /repo/broker/acl     ACL por identidad
 #   /repo/broker/certs   CA y certificados (solo si se abre el listener 8883)
@@ -16,9 +20,8 @@ REPO="${REPO:-/repo}"
 CONF_DIR=/mosquitto/config
 CONF="$CONF_DIR/mosquitto.conf"
 DATA_DIR=/mosquitto/data
-LOG_DIR=/mosquitto/log
 
-mkdir -p "$CONF_DIR" "$DATA_DIR" "$LOG_DIR"
+mkdir -p "$CONF_DIR" "$DATA_DIR" "$CONF_DIR/certs"
 
 # ------------------------------------------------------------- plugins o 2.0
 PLUGIN_DIR=""
@@ -36,21 +39,14 @@ fi
 cp "$REPO/broker/passwd" "$CONF_DIR/passwd"
 cp "$REPO/broker/acl" "$CONF_DIR/acl"
 chmod 640 "$CONF_DIR/passwd" "$CONF_DIR/acl"
-if id mosquitto >/dev/null 2>&1; then
-  chown mosquitto:mosquitto "$CONF_DIR/passwd" "$CONF_DIR/acl" "$DATA_DIR" "$LOG_DIR" 2>/dev/null || true
-fi
 
 # --------------------------------------------------- listener de nodos (8883)
 # CERRADO por defecto: se abre cuando llegue la placa ESP32.
 NODES_LISTENER="${NODES_LISTENER:-0}"
 if [ "$NODES_LISTENER" = "1" ]; then
-  mkdir -p /mosquitto/certs
-  cp "$REPO/broker/certs/ca.crt" "$REPO/broker/certs/server.crt" "$REPO/broker/certs/server.key" /mosquitto/certs/
-  chmod 600 /mosquitto/certs/server.key
-  chmod 644 /mosquitto/certs/ca.crt /mosquitto/certs/server.crt
-  if id mosquitto >/dev/null 2>&1; then
-    chown -R mosquitto:mosquitto /mosquitto/certs
-  fi
+  cp "$REPO/broker/certs/ca.crt" "$REPO/broker/certs/server.crt" "$REPO/broker/certs/server.key" "$CONF_DIR/certs/"
+  chmod 600 "$CONF_DIR/certs/server.key"
+  chmod 644 "$CONF_DIR/certs/ca.crt" "$CONF_DIR/certs/server.crt"
 fi
 
 # ------------------------------------------------------------- configuración
@@ -87,9 +83,9 @@ fi
     echo "# ---- nodos sensores (mTLS). El certificado ES la identidad."
     echo "listener 8883 0.0.0.0"
     echo "listener_allow_anonymous false"
-    echo "cafile /mosquitto/certs/ca.crt"
-    echo "certfile /mosquitto/certs/server.crt"
-    echo "keyfile /mosquitto/certs/server.key"
+    echo "cafile $CONF_DIR/certs/ca.crt"
+    echo "certfile $CONF_DIR/certs/server.crt"
+    echo "keyfile $CONF_DIR/certs/server.key"
     echo "require_certificate true"
     echo "use_identity_as_username true"
     if [ -n "$PASSWD_PLUGIN" ] && [ -n "$ACL_PLUGIN" ]; then
@@ -107,6 +103,7 @@ fi
   echo ""
   echo "persistence true"
   echo "persistence_location $DATA_DIR/"
+  echo "pid_file $DATA_DIR/mosquitto.pid"
   echo ""
   echo "log_dest stdout"
   echo "log_type error"
@@ -116,9 +113,6 @@ fi
 } > "$CONF"
 
 chmod 640 "$CONF"
-if id mosquitto >/dev/null 2>&1; then
-  chown mosquitto:mosquitto "$CONF"
-fi
 
 echo "[broker] configuración generada en $CONF"
 if [ -n "$PASSWD_PLUGIN" ]; then

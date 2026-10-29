@@ -4,7 +4,7 @@
 # un solo contenedor expone toda la aplicación en el puerto 8000.
 
 # ---------------------------------------------------------------- base
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.2-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH
 RUN npm install -g pnpm@11.1.2 \
