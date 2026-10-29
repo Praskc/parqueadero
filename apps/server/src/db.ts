@@ -15,7 +15,8 @@ interface FilaEspacio {
   ts: number;
 }
 
-const db = new Database("parqueadero.db");
+/** Ruta de la base: relativa al CWD por defecto, configurable para contenedores. */
+const db = new Database(process.env.DB_PATH ?? "parqueadero.db");
 db.pragma("journal_mode = WAL");
 db.exec(`
 CREATE TABLE IF NOT EXISTS espacios (

@@ -69,6 +69,9 @@ export async function buildApp(deps: HttpDeps) {
 
   app.get("/api/estado", () => deps.snapshot());
 
+  /** Sonda de vida para contenedores y balanceadores. */
+  app.get("/health", () => ({ ok: true }));
+
   /** Verificación del token de operador (cierra el circuito de la pantalla de bloqueo). */
   app.get("/api/sesion", (req, reply) => {
     if (excede(intentosSesion, req.ip, LIMITE_SESION_POR_MINUTO))
