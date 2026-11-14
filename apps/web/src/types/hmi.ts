@@ -33,6 +33,15 @@ export interface NotificacionHMI {
   prioridad: "alta" | "media" | "baja";
 }
 
+export interface DisenoVehiculo {
+  id: string;
+  tipo: "moto" | "carro";
+  modelo: string;
+  svg?: string;
+  color?: string;
+  cascoColor?: string;
+}
+
 export interface AnimacionMoto {
   id: string;
   tipo: "ingreso" | "salida";
@@ -41,7 +50,7 @@ export interface AnimacionMoto {
   etapa: EtapaMoto;
   posicionActual: PosicionMapa;
   oculto?: boolean;
-  modelo?: "scooter" | "clasica" | "enduro" | "deportiva";
+  modelo?: string;
   color?: string;
   cascoColor?: string;
 }

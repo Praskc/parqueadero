@@ -3,7 +3,7 @@
 withDefaults(
   defineProps<{
     color?: string;
-    tipo?: "sedan" | "suv" | "compacto";
+    tipo?: string;
     faro?: boolean;
   }>(),
   {
