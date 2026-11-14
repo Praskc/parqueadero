@@ -49,23 +49,23 @@ El aprovisionamiento deja todo en el repo, así que los archivos se pueden copia
 
 El `.pem` **no** se versiona: está en `.gitignore` y solo existe en tu máquina.
 
-## Abrir el listener de nodos (8883, mTLS)
+## Listener de nodos (8883, mTLS)
 
-Está cerrado por defecto hasta que llegue la placa. Con Docker:
+Viene abierto: `compose.yaml` publica `8883` y el broker arranca con `NODES_LISTENER=1`. Para cerrarlo mientras no haya nodos conectados:
 
 ```bash
-NODES_LISTENER=1 docker compose up -d broker
+NODES_LISTENER=0 docker compose up -d broker
 ```
 
-Y descomenta el mapeo en `compose.yaml`:
+y comenta el mapeo del puerto en `compose.yaml`:
 
 ```yaml
     ports:
       - "127.0.0.1:1883:1883"
-      - "8883:8883"
+      # - "8883:8883"
 ```
 
-Abre solo el 8883 en el firewall para la subred del campus.
+En Windows, abre solo el 8883 en el firewall para la subred del nodo.
 
 ## Comandos útiles
 
@@ -101,15 +101,10 @@ El script `scripts/provision-mqtt.sh` y el de PowerShell dejan las claves en los
 | Límites de recursos | `pids_limit: 100` y `mem_limit` (256 MB broker, 512 MB app) |
 | Imágenes fijadas | `eclipse-mosquitto:2.1.2-alpine` (misma versión que el broker nativo) y `node:24.22.2-bookworm-slim` |
 | Repo de solo lectura | `.` montado como `:ro` en `broker` y `app`; solo `mqtt-init` escribe (y termina solo) |
-| Listener de nodos | `8883` cerrado por defecto (`NODES_LISTENER=0`); se abre solo cuando llegue la placa ESP32 con mTLS |
+| Listener de nodos | `8883` abierto por defecto (`NODES_LISTENER=1`), con mTLS y ACL por certificado |
 | Puerto 1883 | Publicado solo en `127.0.0.1`, no expuesto a la red |
 
-La sonda de seguridad también se ejecuta contra el stack levantado con Docker:
-
-```bash
-docker compose up --build
-pnpm security:check   # contra http://localhost:8000
-```
+Los secretos generados por `mqtt-init` (`.env`, `apps/server/.env`, `broker/passwd`, `broker/acl` y `broker/certs/`) están en `.gitignore`. No los subas al repositorio.
 
 ## Si algo falla
 
