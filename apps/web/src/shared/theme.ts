@@ -44,6 +44,12 @@ if (typeof window !== "undefined") {
         document.body.classList.add("bg-[#f1f5f9]", "text-slate-900");
         document.body.classList.remove("bg-[#0b1120]", "text-slate-100");
       }
+
+      // Controles nativos y barra del navegador siguen al tema elegido.
+      document.documentElement.style.colorScheme = val === "oscuro" ? "dark" : "light";
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", val === "oscuro" ? "#0b1120" : "#0f172a");
     },
     { immediate: true },
   );

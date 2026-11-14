@@ -1,20 +1,39 @@
 ﻿<!doctype html>
-<html lang="es">
+<html lang="es-CO">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="color-scheme" content="light" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="application-name" content="Parqueadero" />
     <title>Parquesoft - Sede Puerta Roja</title>
+
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/unisucre.webp" type="image/webp" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
     <meta name="description" content="Tablero público y panel de control en tiempo real para el Parqueadero Campus Puerta Roja de la Universidad de Sucre." />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Parqueadero" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta property="og:site_name" content="Parqueadero Unisucre" />
+    <meta property="og:locale" content="es_CO" />
     <meta property="og:title" content="Parquesoft - Sede Puerta Roja" />
     <meta property="og:description" content="Tablero público y panel de control en tiempo real para el Parqueadero Campus Puerta Roja de la Universidad de Sucre." />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="twitter:card" content="summary" />
   </head>
   <body class="antialiased overflow-x-hidden transition-colors duration-200 bg-[#f1f5f9] text-slate-900">
+    <noscript>
+      <p style="margin:0;padding:1.5rem;font-family:system-ui,sans-serif;line-height:1.5">
+        El tablero necesita JavaScript para actualizarse en tiempo real. Actívalo en este navegador y vuelve a cargar la página.
+      </p>
+    </noscript>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
