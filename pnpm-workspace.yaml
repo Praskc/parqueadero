@@ -2,8 +2,10 @@ packages:
   - apps/*
   - packages/*
 
-onlyBuiltDependencies:
-  - better-sqlite3
+# pnpm 11 exige aprobar los scripts de build: sin esto la instalación falla
+# con ERR_PNPM_IGNORED_BUILDS. better-sqlite3 compila el binding nativo.
+allowBuilds:
+  better-sqlite3: true
 
 # Parches de seguridad sobre dependencias transitivas (pnpm 11 los lee aquí).
 #   fast-uri  -> GHSA-333x-w4r6-6crp (suplantación de esquema URI)
