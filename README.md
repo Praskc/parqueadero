@@ -138,7 +138,13 @@ parqueadero/
 │  │  ├─ src/realtime.ts           Difusión del snapshot a las pestañas
 │  │  └─ src/index.ts              Arranque y orden de inicialización
 │  └─ web/                         HMI del kiosco
-│     ├─ public/                   robots.txt, favicon y logo institucional
+│     ├─ public/                   Archivos estáticos que sirve el backend
+│     │  ├─ robots.txt             Bloquea el rastreo del tablero
+│     │  ├─ favicon.ico            Icono 16/32/48 px
+│     │  ├─ apple-touch-icon.png   Icono de iOS, 180 px
+│     │  ├─ site.webmanifest       Nombre, colores e iconos para instalar
+│     │  ├─ icons/                 Iconos 192 y 512 px del manifest
+│     │  └─ .well-known/security.txt  Contacto para reportar fallos (RFC 9116)
 │     ├─ src/features/display/     Pantalla pública, cinta de telemetría y resumen
 │     ├─ src/features/operador/    Consola, analítica, matriz y libro de registros
 │     ├─ src/features/parqueadero/ Plano SVG, figuras, lógica de maniobras y WS
@@ -172,7 +178,7 @@ parqueadero/
 └─ package.json                    Comandos raíz del monorepo
 ```
 
-El tablero no se indexa: `apps/web/public/robots.txt` bloquea a los rastreadores y la portada lleva `noindex, nofollow`. Vite copia esos archivos a `dist/`, y el backend los sirve desde la raíz.
+El tablero no se indexa: `apps/web/public/robots.txt` bloquea a los rastreadores y la portada lleva `noindex, nofollow`. Por eso no hay `sitemap.xml`: un mapa de sitio contradice el `noindex`. Vite copia `public/` a `dist/` y el backend lo sirve desde la raíz.
 
 Los dos aprovisionadores (`provision-mqtt.sh` y `provision-mqtt.ps1`) hacen exactamente lo mismo y escriben en los mismos archivos, así que se puede alternar entre Docker y la instalación nativa sin volver a configurar nada. El `.sh` es el que usa el contenedor `mqtt-init`, el `.ps1` es el que se invoca con `pnpm mqtt:provision` en Windows.
 
@@ -219,6 +225,8 @@ pnpm mqtt:provision
 pnpm broker
 pnpm dev
 ```
+
+> Los comandos nativos para **Linux y macOS** son trabajo futuro. Hoy esta vía es PowerShell y los `pnpm broker`, `pnpm mqtt:*` invocan `pwsh` de forma explícita. En Linux la alternativa es Docker, que ya trae el aprovisionamiento en `scripts/provision-mqtt.sh`.
 
 | Servicio | Dirección |
 |---|---|
@@ -291,10 +299,23 @@ Para reportar un hallazgo, usa el reporte privado de GitHub que se describe en [
 |---|---|---|---|
 | `GET` | `/api/estado` | — | Snapshot de las 30 plazas y cupos libres |
 | `GET` | `/api/sesion` | `x-admin-token` | Valida la clave del operador |
-| `GET` | `/api/historial/:id` | — | Últimos 50 cambios de una plaza |
-| `GET` | `/api/analitica/hoy` | — | Eventos del día en curso |
+| `GET` | `/api/historial/:id` | `x-admin-token` | Últimos 50 cambios de una plaza |
+| `GET` | `/api/analitica/hoy` | `x-admin-token` | Eventos del día en curso |
 | `POST` | `/api/espacios/:id` | `x-admin-token` | Cambia una plaza (`LIBRE`/`OCUPADO`) |
 | `GET` | `/ws` | — | Snapshot inicial y cambios en vivo |
+
+### Servido de la web
+
+Los archivos de `public/` se copian a `dist/` en el build y el backend los sirve desde la raíz:
+
+| Ruta | Respuesta | Caché |
+|---|---|---|
+| `/assets/*` | JS, CSS y fuentes con hash en el nombre | `public, max-age=31536000, immutable` |
+| `/` y rutas desconocidas | La portada de la SPA | `no-cache` |
+| `/robots.txt`, `/site.webmanifest`, `/.well-known/security.txt` | Tal cual | `no-cache` |
+| `/api/*` y `/ws` desconocidos | `404` con JSON | — |
+
+Las rutas que no son de la API devuelven la portada para que la SPA resuelva en el cliente. La API y el WebSocket sí responden 404, así que un endpoint mal escrito no se disfraza de página.
 
 ## Scripts
 
@@ -311,6 +332,8 @@ Todos los comandos se ejecutan desde la raíz del repositorio.
 
 Los `.ps1` requieren PowerShell 7 y se usan en la instalación nativa de Windows. En Docker el aprovisionamiento lo hace `scripts/provision-mqtt.sh` desde el contenedor `mqtt-init`, sin intervención manual.
 
+Los equivalentes en shell para Linux y macOS (`broker.sh`, `mqtt-log.sh`, `mqtt-nodo.sh` y los `pnpm` correspondientes) son trabajo futuro. La lógica de aprovisionamiento ya existe en `provision-mqtt.sh` y es la que usa Docker.
+
 ## Accesibilidad
 
 - Escala de interfaz al 150 % y 200 % con persistencia.
@@ -325,6 +348,7 @@ Los `.ps1` requieren PowerShell 7 y se usan en la instalación nativa de Windows
 - El listener `8883` está abierto con mTLS y ACL por nodo. En Windows, acótalo en el firewall a la subred del nodo.
 - Falta elegir el sensor de plaza definitivo; el FC-51 se descartó por luz solar.
 - El nodo sensor es externo a este repositorio. Cualquier dispositivo que cumpla el contrato MQTT de arriba puede ocupar su lugar, incluido `mosquitto_pub` para pruebas.
+- Los comandos nativos para Linux y macOS son trabajo futuro. Hoy la vía nativa es PowerShell y la portable es Docker.
 
 ## Documentación
 
