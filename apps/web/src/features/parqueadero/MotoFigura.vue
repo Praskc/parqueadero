@@ -2,7 +2,7 @@
 // Silueta cenital arquitectónica de motocicleta orientada a +x (estacionada sin piloto o en circulación con piloto).
 withDefaults(
   defineProps<{
-    modelo?: "scooter" | "clasica" | "enduro" | "deportiva";
+    modelo?: string;
     color?: string;
     cascoColor?: string;
     faro?: boolean;
