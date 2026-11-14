@@ -77,19 +77,19 @@ El nodo no compara una distancia contra un solo umbral. Un vehículo detenido ju
 
 ### 1. Banda muerta por sensor (Schmitt)
 
-Cada uno de los tres ultrasónicos tiene dos umbrales. Se activa cuando la distancia **baja** del umbral de cerca y solo se libera cuando **supera** el de lejos. Entre ambos valores conserva lo que tenía.
+Cada uno de los tres ultrasónicos tiene dos umbrales. Se activa cuando la distancia **es igual o menor** que el umbral de cerca y solo se libera cuando **supera** el de lejos. Entre ambos valores conserva lo que tenía.
 
-| Sensor | Se activa por debajo de | Se libera por encima de | Banda muerta |
+| Sensor | Se activa con | Se libera con | Banda muerta |
 |---|---|---|---|
-| S1 | 120 cm | 130 cm | 10 cm |
-| S2 | 25 cm | 30 cm | 5 cm |
-| S3 | 30 cm | 36 cm | 6 cm |
+| S1 | 120 cm o menos | más de 130 cm | 10 cm |
+| S2 | 25 cm o menos | más de 30 cm | 5 cm |
+| S3 | 30 cm o menos | más de 36 cm | 6 cm |
 
 Cada sensor mide cinco veces por ciclo, espaciadas 60 ms, y se queda con la mediana de las cinco. Un pulso de eco menor a 120 µs se descarta como ruido del sensor y una lectura sin eco se reporta como 400 cm.
 
 ### 2. Voto por mayoría
 
-La plaza se considera cerca cuando **al menos dos de los tres** sensores están en estado «cerca». Para liberarla hace falta lo simétrico: que al menos dos estén en «lejos». Un sensor que deja de responder durante tres ciclos seguidos se marca como fallo y queda fuera del voto. Si quedan menos de dos sensores sanos, la lectura se trata como «sin eco» en lugar de darse por ocupada.
+La plaza se considera cerca cuando **al menos dos de los tres** sensores están en estado «cerca». Para liberarla hace falta lo simétrico: que al menos dos estén en «lejos». Un sensor que deja de responder durante tres ciclos seguidos se marca como fallo y queda fuera del conteo. Si quedan menos de dos sensores sanos, la distancia que se reporta se trata como «sin eco» y la ocupación no se puede confirmar.
 
 ### 3. Confirmación temporal
 
