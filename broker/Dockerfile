@@ -17,4 +17,4 @@ RUN chmod +x /usr/local/bin/parq-broker.sh
 
 EXPOSE 1883 8883
 ENTRYPOINT ["/usr/local/bin/parq-broker.sh"]
-CMD ["mosquitto"]
+CMD ["mosquitto", "-c", "/mosquitto/mosquitto.conf"]

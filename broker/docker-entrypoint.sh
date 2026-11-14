@@ -21,7 +21,8 @@ if [ -n "$PLUGIN_DIR" ]; then
   [ -f "$PLUGIN_DIR/mosquitto_acl_file.so" ] && ACL_PLUGIN="$PLUGIN_DIR/mosquitto_acl_file.so"
 fi
 
-# Generar passwd y ACL dentro del contenedor.
+# Generar passwd y ACL dentro del contenedor (idempotente: -c rechaza archivos existentes).
+rm -f "$CONF_DIR/passwd"
 if [ -n "${MQTT_USER:-}" ] && [ -n "${MQTT_PASS:-}" ]; then
   mosquitto_passwd -c -b "$CONF_DIR/passwd" "${MQTT_USER}" "${MQTT_PASS}"
 else
@@ -29,12 +30,18 @@ else
 fi
 chmod 640 "$CONF_DIR/passwd"
 
-cat > "$CONF_DIR/acl" <<EOF
+# ACL: la generada por provision-mqtt.sh es la fuente de verdad (incluye el
+# write de espacios/+/estado del backend); la mínima sirve solo como fallback.
+if [ -s "$REPO/broker/acl" ]; then
+  cp "$REPO/broker/acl" "$CONF_DIR/acl"
+else
+  cat > "$CONF_DIR/acl" <<EOF
 user ${MQTT_USER:-backend}
 topic read parq/#
 topic write parq/+/disponibles
 topic write parq/+/+/comandos/#
 EOF
+fi
 chmod 640 "$CONF_DIR/acl"
 
 # Listener de nodos (8883, cerrado por defecto).
