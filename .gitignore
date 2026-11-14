@@ -9,11 +9,38 @@ broker/data/
 # PKI del broker: la CA y las claves privadas de los nodos nunca van al repo.
 broker/certs/
 
-# Secretos locales (API keys) — nunca al repo
+# Secretos locales (API keys) - nunca al repo
 .secrets/
 
-# Capturas y salidas de las sondas CDP (regenerables con scripts/probe-*.mjs)
+# ---------------------------------------------------------------------------
+# Material de trabajo que no forma parte de la aplicación.
+# Se conserva en disco, pero no se publica en el repositorio.
+# ---------------------------------------------------------------------------
+# Artículo, figuras y scripts de medición del informe
+paper/
+# CSV y capturas de las campañas de medición
+measuring/
+# Auditorías de estilo del documento
+anti-slop/
+# Planes y especificaciones de trabajo
+docs/superpowers/
+# Nodo ESP32 (incluye secrets.h con credenciales)
+firmware/
+# Bitácora de diseño previa al README
+contexto-mqtt-parqueadero.md
+
+# Sondas y pruebas de escritorio (CDP, capturas, verificación de seguridad)
+scripts/pruebas/
 scripts/out*/
+
+# Borradores y salidas sueltas de herramienta
+medir_serial.py
+texput.log
+test.png
+Paneldecontrol.png
+e2_*.png
+e3_*.png
+__pycache__/
 
 # Basura de SO
 Thumbs.db
