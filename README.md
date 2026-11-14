@@ -138,6 +138,7 @@ parqueadero/
 │  │  ├─ src/realtime.ts           Difusión del snapshot a las pestañas
 │  │  └─ src/index.ts              Arranque y orden de inicialización
 │  └─ web/                         HMI del kiosco
+│     ├─ public/                   robots.txt, favicon y logo institucional
 │     ├─ src/features/display/     Pantalla pública, cinta de telemetría y resumen
 │     ├─ src/features/operador/    Consola, analítica, matriz y libro de registros
 │     ├─ src/features/parqueadero/ Plano SVG, figuras, lógica de maniobras y WS
@@ -162,8 +163,16 @@ parqueadero/
 │  └─ mqtt-nodo.ps1                Publica como nodo con certificado (banco de pruebas)
 ├─ Dockerfile                      Imagen de la aplicación (API + HMI)
 ├─ compose.yaml                    Stack completo: broker + app
+├─ .env.example                    Plantilla de las variables del compose
+├─ .editorconfig                   Estilo de código para el editor
+├─ .gitattributes                  Finales de línea LF salvo binarios
+├─ .nvmrc                          Versión de Node del proyecto (24)
+├─ SECURITY.md                     Cómo reportar una vulnerabilidad
+├─ LICENSE                         MIT
 └─ package.json                    Comandos raíz del monorepo
 ```
+
+El tablero no se indexa: `apps/web/public/robots.txt` bloquea a los rastreadores y la portada lleva `noindex, nofollow`. Vite copia esos archivos a `dist/`, y el backend los sirve desde la raíz.
 
 Los dos aprovisionadores (`provision-mqtt.sh` y `provision-mqtt.ps1`) hacen exactamente lo mismo y escriben en los mismos archivos, así que se puede alternar entre Docker y la instalación nativa sin volver a configurar nada. El `.sh` es el que usa el contenedor `mqtt-init`, el `.ps1` es el que se invoca con `pnpm mqtt:provision` en Windows.
 
@@ -273,6 +282,8 @@ Para agregar un nodo:
 | Contenedores | Usuario sin privilegios, sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges`, límites de memoria y de PIDs, imágenes con versión fijada |
 
 Los secretos quedan fuera del control de versiones: `.env`, `apps/server/.env`, `broker/passwd`, `broker/certs/` y las credenciales de cada nodo están en `.gitignore`.
+
+Para reportar un hallazgo, usa el reporte privado de GitHub que se describe en [`SECURITY.md`](SECURITY.md).
 
 ## API HTTP
 

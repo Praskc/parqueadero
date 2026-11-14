@@ -1,0 +1,16 @@
+# Normaliza los finales de linea a LF. Los scripts de `scripts/` y `docker/`,
+# y los `Dockerfile`, se ejecutan en contenedores Linux: con CRLF fallan con
+# "bad interpreter". Los binarios no se tocan.
+
+* text=auto eol=lf
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.db binary

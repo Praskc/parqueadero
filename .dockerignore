@@ -1,6 +1,9 @@
 # Contexto de build: solo lo necesario para las imágenes.
 .git
+.gitattributes
 .gitignore
+.editorconfig
+.nvmrc
 node_modules
 **/node_modules
 **/dist
@@ -11,9 +14,18 @@ broker/data
 broker/passwd
 broker/log
 scripts/out*
+scripts/pruebas
 **/*.db
 **/*.db-shm
 **/*.db-wal
+
+# Material de trabajo que no entra en la imagen.
+paper
+measuring
+anti-slop
+firmware
+docs/superpowers
 docs/capturas
+
 *.md
 !README.md
