@@ -3,6 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "HMI de parqueadero en tiempo real para el Campus Puerta Roja de la Universidad de Sucre: 30 plazas, MQTT con mTLS y WebSocket.",
+  "keywords": [
+    "parqueadero",
+    "estacionamiento",
+    "iot",
+    "mqtt",
+    "mosquitto",
+    "esp32",
+    "vue",
+    "fastify",
+    "sqlite",
+    "websocket",
+    "unisucre"
+  ],
+  "homepage": "https://github.com/Praskc/parqueadero#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Praskc/parqueadero.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Praskc/parqueadero/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.1.2",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "broker": "pwsh -NoProfile -File scripts/broker.ps1",
