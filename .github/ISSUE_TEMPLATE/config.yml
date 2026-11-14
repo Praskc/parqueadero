@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Reporte de seguridad
+    url: https://github.com/Praskc/parqueadero/security/advisories/new
+    about: Las vulnerabilidades van por el aviso privado, no por un issue público.
+  - name: Guía de contenedores
+    url: https://github.com/Praskc/parqueadero/blob/main/docs/docker.md
+    about: Arranque, certificados, endurecimiento y resolución de problemas.
