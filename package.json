@@ -9,7 +9,6 @@
     "mqtt:log": "pwsh -NoProfile -File scripts/mqtt-log.ps1",
     "mqtt:provision": "pwsh -NoProfile -File scripts/provision-mqtt.ps1",
     "mqtt:nodo": "pwsh -NoProfile -File scripts/mqtt-nodo.ps1",
-    "check": "pnpm -r check",
-    "security:check": "node scripts/security-check.mjs"
+    "check": "pnpm -r check"
   }
 }

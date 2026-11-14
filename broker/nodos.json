@@ -8,7 +8,7 @@
     {
       "nombre": "nodo-e01",
       "espacios": ["E01"],
-      "nota": "Nodo de banco: E01 + talanquera (firmware/nodo-parqueadero). Agregar aquí cada nodo nuevo antes de provisionar."
+      "nota": "Nodo de banco: E01 + talanquera. Agregar aquí cada nodo nuevo antes de provisionar."
     }
   ]
 }
