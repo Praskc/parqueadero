@@ -1,0 +1,7 @@
+# Parqueadero Campus Puerta Roja - Universidad de Sucre
+#
+# Tablero interno de campus. La vista publica se sirve en tiempo real y no
+# tiene contenido estatico que indexar, asi que no se permite el rastreo.
+
+User-agent: *
+Disallow: /
