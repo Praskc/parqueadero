@@ -1,0 +1,37 @@
+name: Mejora
+description: Una idea para el tablero, la consola o el despliegue
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema resuelve
+      description: Describe la situación, no la solución.
+    validations:
+      required: true
+
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Interfaz del kiosco
+        - Consola de portería
+        - API y persistencia
+        - MQTT y broker
+        - Despliegue y scripts
+        - Documentación
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas que consideraste

@@ -6,6 +6,8 @@
 </p>
 
 <p align="center">
+  <img alt="CI" src="https://github.com/Praskc/parqueadero/actions/workflows/ci.yml/badge.svg">
+  <img alt="versión" src="https://img.shields.io/github/v/release/Praskc/parqueadero?style=flat-square&label=versi%C3%B3n&color=15803d">
   <img alt="rama main" src="https://img.shields.io/badge/rama-main-15803d?style=flat-square">
   <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Vue 3.5" src="https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square&logo=vuedotjs&logoColor=white">
