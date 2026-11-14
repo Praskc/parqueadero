@@ -28,9 +28,10 @@ services:
     image: parqueadero-broker:local
     command: ["bash", "/repo/scripts/provision-mqtt.sh"]
     environment:
-      MQTT_USER: backend
-      MQTT_PASS: REDACTADO
-      ADMIN_TOKEN: REDACTADO
+      # La clave vive en .env (la genera el provisioning); aquí solo se interpola.
+      MQTT_USER: "${MQTT_USER:-backend}"
+      MQTT_PASS: "${MQTT_PASS}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN}"
     volumes:
       - .:/repo
     user: "${DOCKER_UID:-0}:${DOCKER_GID:-0}"
@@ -49,16 +50,16 @@ services:
       mqtt-init:
         condition: service_completed_successfully
     environment:
-      MQTT_USER: backend
-      MQTT_PASS: REDACTADO
+      # Igual que el backend: la clave vive en .env, no incrustada aquí.
+      MQTT_USER: "${MQTT_USER:-backend}"
+      MQTT_PASS: "${MQTT_PASS}"
       # 1 = abre el listener 8883 con mTLS para los nodos ESP32.
-      # Se deja en 0 hasta que llegue la placa.
-      NODES_LISTENER: "${NODES_LISTENER:-0}"
+      NODES_LISTENER: "${NODES_LISTENER:-1}"
     ports:
       # Solo desde la máquina: el backend entra por la red interna de compose.
       - "127.0.0.1:1883:1883"
-      # Nodos sensores (mTLS). Descomentar cuando llegue la placa:
-      # - "8883:8883"
+      # Nodos sensores (mTLS). Abierto en la red local para el ESP32.
+      - "8883:8883"
     volumes:
       # Solo lectura: el broker no modifica el repo.
       - .:/repo:ro
@@ -80,7 +81,7 @@ services:
         - CMD-SHELL
         - >-
           mosquitto_pub -h 127.0.0.1 -p 1883
-          -u "${MQTT_USER}" -P "${MQTT_PASS}"
+          -u "$$MQTT_USER" -P "$$MQTT_PASS"
           -t 'parq/lote1/backend/comandos/healthcheck' -m ok
       interval: 10s
       timeout: 5s
