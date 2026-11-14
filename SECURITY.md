@@ -6,7 +6,7 @@ Solo la rama `main`. El proyecto no mantiene versiones anteriores.
 
 ## Cómo reportar una vulnerabilidad
 
-Usa el reporte privado de GitHub: pestaña **Security** → **Report a vulnerability**. El aviso queda visible solo para los mantenedores y no abre un issue público.
+Usa el reporte privado de GitHub: pestaña **Security** → **Report a vulnerability**. El aviso queda visible solo para los mantenedores y no abre un issue público. El mismo contacto está declarado en `/.well-known/security.txt` (RFC 9116).
 
 No publiques detalles explotables en un issue, en un pull request ni en la sección de discusiones.
 
