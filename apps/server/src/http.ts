@@ -67,11 +67,21 @@ export async function buildApp(deps: HttpDeps) {
     reply.header("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
     if (req.protocol === "https")
       reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+    // Los assets llevan hash en el nombre: se cachean para siempre. El HTML
+    // y los archivos de la raíz se revalidan para que un despliegue nuevo se
+    // vea sin recargar a mano.
+    const ruta = req.url.split("?")[0];
+    if (ruta.startsWith("/assets/"))
+      reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    else if (req.method === "GET" && !ruta.startsWith("/api/"))
+      reply.header("Cache-Control", "no-cache");
   });
 
   // En producción sirve el build de la web; en dev la sirve Vite (con proxy).
   const dist = path.join(import.meta.dirname, "../../web/dist");
-  if (existsSync(dist)) await app.register(fstatic, { root: dist });
+  const sirveWeb = existsSync(dist);
+  if (sirveWeb) await app.register(fstatic, { root: dist, index: "index.html" });
 
   app.get("/api/estado", () => deps.snapshot());
 
@@ -130,6 +140,17 @@ export async function buildApp(deps: HttpDeps) {
       }
     },
   }, (sock) => deps.onConexion(sock as unknown as Sock));
+
+  // Ruta desconocida: la SPA resuelve en el cliente, así que se devuelve la
+  // portada. La API y el WebSocket sí responden 404 para no ocultar errores.
+  app.setNotFoundHandler((req, reply) => {
+    const ruta = req.url.split("?")[0];
+    const esApi = ruta.startsWith("/api/") || ruta.startsWith("/ws");
+    const esLectura = req.method === "GET" || req.method === "HEAD";
+    if (!sirveWeb || !esLectura || esApi)
+      return reply.code(404).send({ error: "no encontrado" });
+    return reply.type("text/html; charset=utf-8").sendFile("index.html");
+  });
 
   return app;
 }
