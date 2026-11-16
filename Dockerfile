@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24.22.2-bookworm-slim AS base
+FROM node:26.13.1-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH
 RUN npm install -g pnpm@11.1.2 \
